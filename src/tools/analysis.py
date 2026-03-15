@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 from typing import Any
 
@@ -14,63 +15,26 @@ from tools.shared import (
     require_locale,
 )
 
+_READ_ONLY_ANNOTATIONS = {
+    "readOnlyHint": True,
+    "destructiveHint": False,
+    "idempotentHint": True,
+    "openWorldHint": True,
+}
 
-def _load_benchmark_notes() -> list[dict[str, Any]]:
-    """Load benchmark notes from ASC_BENCHMARK_NOTES env var or return empty list.
 
-    The env var should be a JSON array of objects with 'lever' and 'benchmark' keys.
-    """
-    raw = os.environ.get("ASC_BENCHMARK_NOTES", "").strip()
+def _load_json_env(env_var: str, expected_type: type, default: Any) -> Any:
+    """Load and validate JSON from an environment variable."""
+    raw = os.environ.get(env_var, "").strip()
     if not raw:
-        return []
-    import json
-
+        return default
     try:
-        notes = json.loads(raw)
-        if isinstance(notes, list):
-            return notes
+        value = json.loads(raw)
+        if isinstance(value, expected_type):
+            return value
     except (json.JSONDecodeError, TypeError):
         pass
-    return []
-
-
-def _load_copy_terms() -> dict[str, list[str]]:
-    """Load copy gap search terms from ASC_COPY_TERMS env var or return empty dict.
-
-    The env var should be a JSON object mapping area names to lists of terms.
-    Example: {"subtitle": ["ai", "stylist"], "keywords": ["ai", "stylist"]}
-    """
-    raw = os.environ.get("ASC_COPY_TERMS", "").strip()
-    if not raw:
-        return {}
-    import json
-
-    try:
-        terms = json.loads(raw)
-        if isinstance(terms, dict):
-            return terms
-    except (json.JSONDecodeError, TypeError):
-        pass
-    return {}
-
-
-def _load_preferred_keywords() -> list[str]:
-    """Load preferred keywords from ASC_PREFERRED_KEYWORDS env var or return empty list.
-
-    The env var should be a JSON array of keyword strings.
-    """
-    raw = os.environ.get("ASC_PREFERRED_KEYWORDS", "").strip()
-    if not raw:
-        return []
-    import json
-
-    try:
-        keywords = json.loads(raw)
-        if isinstance(keywords, list):
-            return [str(k) for k in keywords]
-    except (json.JSONDecodeError, TypeError):
-        pass
-    return []
+    return default
 
 
 def _copy_gaps(snapshot: dict[str, Any]) -> list[dict[str, Any]]:
@@ -88,7 +52,7 @@ def _copy_gaps(snapshot: dict[str, Any]) -> list[dict[str, Any]]:
             }
         )
 
-    copy_terms = _load_copy_terms()
+    copy_terms = _load_json_env("ASC_COPY_TERMS", dict, {})
     subtitle_terms = copy_terms.get("subtitle", [])
     if subtitle_terms and not any(term.lower() in subtitle for term in subtitle_terms):
         gaps.append(
@@ -147,7 +111,7 @@ def get_listing_health(runtime: Any, arguments: dict[str, Any]) -> dict[str, Any
         "revenuecat": revenuecat,
         "observations": {
             "copy_gaps": _copy_gaps(snapshot),
-            "benchmark_notes": _load_benchmark_notes(),
+            "benchmark_notes": _load_json_env("ASC_BENCHMARK_NOTES", list, []),
             "summary": {
                 "active_subscriptions": metrics.get("active_subscriptions"),
                 "active_trials": metrics.get("active_trials"),
@@ -165,7 +129,7 @@ def suggest_keyword_updates(runtime: Any, arguments: dict[str, Any]) -> dict[str
     revenuecat = runtime.revenuecat.get_overview()
     metrics = (revenuecat or {}).get("metrics", {})
 
-    preferred = _load_preferred_keywords()
+    preferred = _load_json_env("ASC_PREFERRED_KEYWORDS", list, [])
     if not preferred:
         return {
             "ok": True,
@@ -226,12 +190,7 @@ ANALYSIS_TOOLS = [
             "additionalProperties": False,
         },
         handler=get_listing_health,
-        annotations={
-            "readOnlyHint": True,
-            "destructiveHint": False,
-            "idempotentHint": True,
-            "openWorldHint": True,
-        },
+        annotations=_READ_ONLY_ANNOTATIONS,
     ),
     ToolDefinition(
         name="asc_suggest_keyword_updates",
@@ -250,11 +209,6 @@ ANALYSIS_TOOLS = [
             "additionalProperties": False,
         },
         handler=suggest_keyword_updates,
-        annotations={
-            "readOnlyHint": True,
-            "destructiveHint": False,
-            "idempotentHint": True,
-            "openWorldHint": True,
-        },
+        annotations=_READ_ONLY_ANNOTATIONS,
     ),
 ]
