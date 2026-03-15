@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from functools import lru_cache
 from typing import Any
 
 from tooling import ToolDefinition
+
+logger = logging.getLogger(__name__)
 from tools.shared import (
     build_keyword_string,
     get_listing_snapshot,
