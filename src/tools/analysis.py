@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+from functools import lru_cache
 from typing import Any
 
 from tooling import ToolDefinition
@@ -23,18 +24,19 @@ _READ_ONLY_ANNOTATIONS = {
 }
 
 
-def _load_json_env(env_var: str, expected_type: type, default: Any) -> Any:
-    """Load and validate JSON from an environment variable."""
+@lru_cache(maxsize=16)
+def _load_json_env(env_var: str, expected_type: type) -> Any:
+    """Load and validate JSON from an environment variable. Cached for the process lifetime."""
     raw = os.environ.get(env_var, "").strip()
     if not raw:
-        return default
+        return None
     try:
         value = json.loads(raw)
         if isinstance(value, expected_type):
             return value
     except (json.JSONDecodeError, TypeError):
         pass
-    return default
+    return None
 
 
 def _copy_gaps(snapshot: dict[str, Any]) -> list[dict[str, Any]]:
@@ -52,7 +54,7 @@ def _copy_gaps(snapshot: dict[str, Any]) -> list[dict[str, Any]]:
             }
         )
 
-    copy_terms = _load_json_env("ASC_COPY_TERMS", dict, {})
+    copy_terms = _load_json_env("ASC_COPY_TERMS", dict) or {}
     subtitle_terms = copy_terms.get("subtitle", [])
     if subtitle_terms and not any(term.lower() in subtitle for term in subtitle_terms):
         gaps.append(
@@ -111,7 +113,7 @@ def get_listing_health(runtime: Any, arguments: dict[str, Any]) -> dict[str, Any
         "revenuecat": revenuecat,
         "observations": {
             "copy_gaps": _copy_gaps(snapshot),
-            "benchmark_notes": _load_json_env("ASC_BENCHMARK_NOTES", list, []),
+            "benchmark_notes": _load_json_env("ASC_BENCHMARK_NOTES", list) or [],
             "summary": {
                 "active_subscriptions": metrics.get("active_subscriptions"),
                 "active_trials": metrics.get("active_trials"),
@@ -129,7 +131,7 @@ def suggest_keyword_updates(runtime: Any, arguments: dict[str, Any]) -> dict[str
     revenuecat = runtime.revenuecat.get_overview()
     metrics = (revenuecat or {}).get("metrics", {})
 
-    preferred = _load_json_env("ASC_PREFERRED_KEYWORDS", list, [])
+    preferred = _load_json_env("ASC_PREFERRED_KEYWORDS", list) or []
     if not preferred:
         return {
             "ok": True,

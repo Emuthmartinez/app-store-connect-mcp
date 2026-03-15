@@ -107,6 +107,8 @@ class Runtime:
 
 
 def test_keyword_suggestion_stays_within_apple_limit(monkeypatch) -> None:
+    from tools.analysis import _load_json_env
+    _load_json_env.cache_clear()
     monkeypatch.setenv("ASC_PREFERRED_KEYWORDS", '["ai stylist", "outfit planner", "wardrobe app"]')
     payload = suggest_keyword_updates(Runtime(), {"locale": "en-US"})
 
@@ -114,7 +116,10 @@ def test_keyword_suggestion_stays_within_apple_limit(monkeypatch) -> None:
     assert "ai stylist" in payload["proposed_keywords"]
 
 
-def test_keyword_suggestion_without_config() -> None:
+def test_keyword_suggestion_without_config(monkeypatch) -> None:
+    from tools.analysis import _load_json_env
+    _load_json_env.cache_clear()
+    monkeypatch.delenv("ASC_PREFERRED_KEYWORDS", raising=False)
     payload = suggest_keyword_updates(Runtime(), {"locale": "en-US"})
 
     assert payload["proposed_keywords"] is None
