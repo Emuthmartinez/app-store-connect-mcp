@@ -2,167 +2,90 @@
 
 Reusable stdio MCP server for App Store Connect listing automation.
 
+App-agnostic — point it at any app by supplying a different env file.
+
 ## What It Does
 
-- Reads App Store listing state for the configured app.
-- Updates description, keywords, subtitle, promotional text, and What’s New.
-- Uploads screenshots into an existing or newly created screenshot set.
-- Submits the current editable version for review.
-- Creates and updates App Store versions, assigns builds, inspects review submissions, and triggers manual release requests.
-- Creates and manages Custom Product Pages, Custom Product Page versions, localizations, and CPP screenshot uploads.
-- Attaches a Custom Product Page version to an existing App Review submission so experiments do not dead-end at draft state.
-- Pulls RevenueCat overview metrics alongside listing data for analysis.
-- Exposes product page optimization experiment reads alongside Custom Product Page reads so agents can see both major ASC experimentation surfaces.
-- Exposes generic App Store Connect API verbs so agents can work across the wider `/v1` surface without waiting for dedicated wrappers.
-- Persists local subscriber freshness state from RevenueCat overview polling and optional webhook ingestion.
-- Writes mutation logs to `data/changes.jsonl`.
-- Returns explicit `completion_state` and `should_continue` fields in tool responses.
+- Reads and updates App Store listing metadata (description, keywords, subtitle, promotional text, What's New).
+- Uploads screenshots into existing or newly created screenshot sets.
+- Manages App Store versions: create, assign builds, submit for review, release.
+- Full Custom Product Page lifecycle: create, version, localize, upload screenshots, attach to review submissions.
+- Product page optimization experiments: create, configure treatments, start/stop.
+- Generic App Store Connect API verbs (`asc_api_get`, `asc_api_post`, etc.) for endpoints without dedicated wrappers.
+- Every mutation is logged with before/after snapshots to `data/changes.jsonl`.
+- All tool responses include `completion_state` and `should_continue` for agentic workflows.
+
+All tool names are prefixed with `asc_` to prevent collisions when used alongside other MCP servers.
+Every tool includes MCP annotations (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`) so clients can auto-approve reads and gate destructive operations.
+
+## Why RevenueCat?
+
+RevenueCat integration is **optional** — the server works fully without it.
+
+When configured, RevenueCat provides the monetization signal that closes the loop between listing changes and business outcomes. Agents can see active subscriptions, trials, and MRR alongside listing metadata, which lets them correlate a keyword change or screenshot swap with subscriber movement. Without this signal, listing optimization is copy-driven only; with it, agents can make data-informed decisions about what to test next.
+
+The integration includes:
+- Overview metrics polling (active subscriptions, trials, MRR) surfaced in listing health reports.
+- Local webhook listener for real-time subscriber event ingestion.
+- Append-only overview history so agents can compare pre/post rollout baselines.
+
+If you don't use RevenueCat, simply omit the `REVENUECAT_*` keys. All RevenueCat-dependent tools degrade gracefully and return `null` metrics.
 
 ## Configuration
 
 The server loads configuration in this order:
 
 1. repo-local `.env`
-2. `APP_STORE_CONNECT_MCP_ENV` if set
+2. `APP_STORE_CONNECT_MCP_ENV` if set (path to an env file)
 3. legacy `ASC_LISTING_MANAGER_ENV` if set
 4. process environment
 
-Required App Store keys:
+### Required
 
-- `APP_STORE_KEY_ID`
-- `APP_STORE_ISSUER_ID`
-- `APP_STORE_PRIVATE_KEY`
-- `APP_STORE_BUNDLE_ID`
+| Variable | Description |
+|----------|-------------|
+| `APP_STORE_KEY_ID` | App Store Connect API key ID |
+| `APP_STORE_ISSUER_ID` | App Store Connect issuer ID |
+| `APP_STORE_PRIVATE_KEY` | Inline PEM content or path to `.p8` file |
+| `APP_STORE_BUNDLE_ID` | Bundle ID of the app to manage |
 
-Optional RevenueCat keys:
+### Optional — RevenueCat
 
-- `REVENUECAT_API_KEY_V2` or `REVENUECAT_API_KEY`
-- `REVENUECAT_PROJECT_ID`
-- `REVENUECAT_WEBHOOK_AUTH_HEADER`
-- `REVENUECAT_WEBHOOK_HOST` default `127.0.0.1`
-- `REVENUECAT_WEBHOOK_PORT` default `8787`
-- `REVENUECAT_WEBHOOK_PATH` default `/revenuecat`
-- `REVENUECAT_EVENT_LOG_PATH`
-- `REVENUECAT_SNAPSHOT_PATH`
-- `REVENUECAT_OVERVIEW_HISTORY_PATH`
-- `APP_STORE_CONNECT_CHANGE_LOG_PATH` or legacy `ASC_LISTING_CHANGE_LOG_PATH`
+| Variable | Description |
+|----------|-------------|
+| `REVENUECAT_API_KEY_V2` | RevenueCat v2 API key (or `REVENUECAT_API_KEY`) |
+| `REVENUECAT_PROJECT_ID` | RevenueCat project ID |
+| `REVENUECAT_WEBHOOK_AUTH_HEADER` | Auth header for webhook verification |
+| `REVENUECAT_WEBHOOK_HOST` | Webhook listener host (default `127.0.0.1`) |
+| `REVENUECAT_WEBHOOK_PORT` | Webhook listener port (default `8787`) |
+| `REVENUECAT_WEBHOOK_PATH` | Webhook listener path (default `/revenuecat`) |
 
-`APP_STORE_PRIVATE_KEY` can be either inline PEM content or a filesystem path to the `.p8` file.
+### Optional — Analysis Heuristics
 
-This server is app-agnostic. Point it at a different business or app by
-supplying a different environment file or process environment.
+Listing health and keyword suggestion tools use configurable heuristics via JSON environment variables:
 
-## Local Run
+| Variable | Description |
+|----------|-------------|
+| `ASC_COPY_TERMS` | JSON object mapping areas to search terms, e.g. `{"subtitle": ["ai", "stylist"]}` |
+| `ASC_BENCHMARK_NOTES` | JSON array of benchmark objects, e.g. `[{"lever": "pricing", "benchmark": "..."}]` |
+| `ASC_PREFERRED_KEYWORDS` | JSON array of keyword strings for suggestions |
+
+If these are not set, analysis tools skip heuristic checks and return metrics-only results.
+
+## Quick Start
 
 ```bash
+# 1. Copy and fill in credentials
+cp .env.example .env
+
+# 2. Install dependencies
+pip install -e ".[dev]"
+
+# 3. Run the server
 python3 src/index.py
 ```
 
-## Portable RevenueCat Webhook Listener
-
-This package includes a local webhook listener that can run on a Mac mini or any other always-on box:
-
-```bash
-python3 src/subscriber_webhook.py
-```
-
-It stores:
-
-- event log: `data/revenuecat-events.jsonl`
-- snapshot: `data/revenuecat-snapshot.json`
-- overview history: `data/revenuecat-overview-history.jsonl`
-
-If you want RevenueCat to deliver events directly to the machine, expose the listener with your preferred reverse proxy or tunnel and set `REVENUECAT_WEBHOOK_AUTH_HEADER`.
-
-The local subscriber layer is now:
-
-- idempotent for duplicate `event.id` deliveries
-- transfer-aware across `app_user_id`, `original_app_user_id`, `aliases`, `transferred_to`, and `transferred_from`
-- append-only for overview polling history so agents can compare pre/post rollout baselines without separate manual exports
-
-## Generic ASC API Coverage
-
-The MCP server now includes generic primitives:
-
-- `get_asc_api_capabilities`
-- `asc_api_get`
-- `asc_api_list`
-- `asc_api_post`
-- `asc_api_patch`
-- `asc_api_delete`
-
-`get_asc_api_capabilities` returns:
-
-- JSON:API request and relationship hints
-- a machine-readable endpoint catalog for the most common listing/version/screenshot/pricing flows
-- live runtime anchors for the configured app, app info, current version, and version localizations
-
-Generic mutations are no longer fire-and-forget. `asc_api_post`, `asc_api_patch`, and `asc_api_delete` now log:
-
-- request path and body
-- best-effort before and after snapshots
-- the raw mutation response
-- RevenueCat overview metrics at mutation time
-
-These tools are the portability layer for endpoints that are not wrapped yet, including future Custom Product Page operations.
-
-## Dedicated Experimentation Wrappers
-
-The MCP server now has dedicated agent-facing tools for the ASC surfaces most useful for experimentation:
-
-- Version transitions:
-  - `get_version_transition_state`
-  - `list_build_candidates`
-  - `create_app_store_version`
-  - `update_app_store_version`
-  - `assign_build_to_version`
-  - `release_app_store_version`
-  - `get_review_submissions`
-  - `create_review_submission`
-  - `add_custom_product_page_version_to_review_submission`
-- Experiment surfaces:
-  - `get_product_page_optimization_experiment`
-  - `create_product_page_optimization_experiment`
-  - `update_product_page_optimization_experiment`
-  - `delete_product_page_optimization_experiment`
-  - `list_product_page_optimization_treatments`
-  - `get_product_page_optimization_treatment`
-  - `create_product_page_optimization_treatment`
-  - `update_product_page_optimization_treatment`
-  - `delete_product_page_optimization_treatment`
-  - `get_product_page_optimization_experiments`
-  - `list_custom_product_pages`
-  - `get_custom_product_page`
-  - `create_custom_product_page`
-  - `update_custom_product_page`
-  - `delete_custom_product_page`
-  - `create_custom_product_page_version`
-  - `update_custom_product_page_version`
-  - `create_custom_product_page_localization`
-  - `update_custom_product_page_localization`
-  - `delete_custom_product_page_localization`
-  - `upload_custom_product_page_screenshot`
-
-These wrappers keep the workflow agent-native:
-
-- atomic enough for prompt-driven composition
-- auditable through the same change log used by listing mutations
-- portable to a Mac mini or any other host running the stdio MCP server
-
-Live ASC behavior to account for in agents:
-
-- `create_review_submission` can create a fresh submission even when a different submission is already waiting for review, so agents should read current review state before assuming there is only one.
-- `create_custom_product_page` creates the initial CPP draft version and localization inline. That means `create_custom_product_page_version` will return a structured `409` conflict until the current CPP version is no longer inflight.
-
-## Tests
-
-```bash
-pytest tests -q
-```
-
 ## MCP Registration
-
-Example registration:
 
 ```json
 {
@@ -175,24 +98,63 @@ Example registration:
 }
 ```
 
-Point the server at an app-specific env file with `APP_STORE_CONNECT_MCP_ENV`
-when you need per-business credentials without duplicating the repo.
+Point at an app-specific env file with `APP_STORE_CONNECT_MCP_ENV` when you need per-app credentials without duplicating the repo.
 
-## Codex / Claude Setup
+Ready-made client snippets for Claude, Codex, and generic MCP registration live in `clients/`.
 
-Ready-made client snippets live in `clients/`:
+## RevenueCat Webhook Listener
 
-- `clients/codex.config.toml.example`
-- `clients/mcp.json.example`
-- `clients/claude.mcpServers.json.example`
+Optional standalone webhook listener for real-time subscriber event ingestion:
 
-The default examples point at the Mac mini path:
+```bash
+python3 src/subscriber_webhook.py
+```
 
-- server: `/Users/openclawmac/mcp-servers/app-store-connect-mcp/src/index.py`
-- app-specific env: `/Users/openclawmac/mcp-servers/app-store-connect-mcp/profiles/clueless.env`
+Stores event log, snapshot, and overview history as JSONL/JSON in `data/`. Expose with a reverse proxy or tunnel if you want RevenueCat to deliver events directly.
 
-Recommended flow:
+The subscriber layer is:
+- Idempotent for duplicate `event.id` deliveries.
+- Transfer-aware across `app_user_id`, `original_app_user_id`, aliases, and transfer fields.
+- Append-only for overview history.
 
-1. Copy `profiles/clueless.env.example` to `profiles/clueless.env`
-2. Fill in the app-specific credentials there
-3. Copy the matching client snippet into Codex or Claude MCP config
+## Tests
+
+```bash
+pytest tests -q
+```
+
+## CI
+
+GitHub Actions runs `ruff check`, `ruff format --check`, and `pytest` on Python 3.11-3.13 for every push and PR to `main`.
+
+## Tool Reference
+
+All 54 tools are prefixed with `asc_` and include MCP annotations. Key categories:
+
+**Listing reads:** `asc_get_app_info`, `asc_get_app_listing`, `asc_get_app_versions`, `asc_get_app_screenshots`, `asc_get_app_pricing`
+
+**Listing writes:** `asc_update_description`, `asc_update_keywords`, `asc_update_subtitle`, `asc_update_promotional_text`, `asc_update_whats_new`, `asc_upload_screenshot`, `asc_submit_for_review`
+
+**Versioning:** `asc_get_version_transition_state`, `asc_list_build_candidates`, `asc_create_app_store_version`, `asc_update_app_store_version`, `asc_assign_build_to_version`, `asc_release_app_store_version`
+
+**Review:** `asc_get_review_submissions`, `asc_create_review_submission`, `asc_add_custom_product_page_version_to_review_submission`
+
+**Experiments:** `asc_get_product_page_optimization_experiments`, `asc_create_product_page_optimization_experiment`, `asc_update_product_page_optimization_experiment`, `asc_delete_product_page_optimization_experiment`, plus treatment CRUD
+
+**Custom Product Pages:** `asc_list_custom_product_pages`, `asc_get_custom_product_page`, `asc_create_custom_product_page`, plus version, localization, and screenshot operations
+
+**Generic API:** `get_asc_api_capabilities`, `asc_api_get`, `asc_api_list`, `asc_api_post`, `asc_api_patch`, `asc_api_delete`
+
+**Analysis:** `asc_get_listing_health`, `asc_suggest_keyword_updates`
+
+**Subscriber:** `asc_refresh_subscriber_overview`, `asc_get_subscriber_snapshot`, `asc_list_subscriber_events`, `asc_list_subscriber_overview_history`
+
+## ASC API Behavioral Notes
+
+- `asc_create_review_submission` can create a fresh submission even when one is already waiting for review. Agents should read current review state first.
+- `asc_create_custom_product_page` creates the initial draft version and localization inline. `asc_create_custom_product_page_version` will return a `409` until the current version is no longer inflight.
+- Generic mutation tools (`asc_api_post`, `asc_api_patch`, `asc_api_delete`) log before/after snapshots and RevenueCat metrics to the change log.
+
+## License
+
+MIT

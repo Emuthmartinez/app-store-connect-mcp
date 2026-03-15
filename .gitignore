@@ -6,3 +6,6 @@ __pycache__/
 data/*
 !data/.gitignore
 !data/.gitkeep
+
+# Internal docs (audits, review artifacts, private notes)
+docs/internal/
