@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Callable
 
 from mcp.types import Tool
@@ -19,10 +19,14 @@ class ToolDefinition:
     description: str
     input_schema: dict[str, Any]
     handler: ToolHandler
+    annotations: dict[str, Any] = field(default_factory=dict)
 
     def to_mcp_tool(self) -> Tool:
-        return Tool(
-            name=self.name,
-            description=self.description,
-            inputSchema=self.input_schema,
-        )
+        kwargs: dict[str, Any] = {
+            "name": self.name,
+            "description": self.description,
+            "inputSchema": self.input_schema,
+        }
+        if self.annotations:
+            kwargs["annotations"] = self.annotations
+        return Tool(**kwargs)

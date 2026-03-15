@@ -4,10 +4,21 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
+import logging
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+
+# Route all logging to stderr so stdout stays clean for the MCP stdio protocol.
+logging.basicConfig(
+    stream=sys.stderr,
+    level=logging.WARNING,
+    format="%(levelname)s %(name)s: %(message)s",
+)
+
+__version__ = "0.2.0"
 
 CURRENT_DIR = Path(__file__).resolve().parent
 if str(CURRENT_DIR) not in sys.path:
@@ -17,7 +28,7 @@ from auth import AppStoreJwtProvider
 from change_log import ChangeLogger
 from client import AppStoreConnectClient
 from config import Settings
-from errors import serialize_error
+from errors import AppStoreConnectMcpError, serialize_error
 from revenuecat import RevenueCatMetricsClient
 from subscriber_state import SubscriberSnapshotStore
 from tools import ALL_TOOLS
@@ -33,6 +44,8 @@ except ImportError:
     )
     sys.exit(1)
 
+logger = logging.getLogger("app_store_connect_mcp")
+
 
 @dataclass(slots=True)
 class Runtime:
@@ -45,7 +58,7 @@ class Runtime:
     subscriber_store: SubscriberSnapshotStore
 
 
-SERVER_NAME = "app-store-connect-mcp"
+SERVER_NAME = "app_store_connect_mcp"
 server = Server(SERVER_NAME)
 tool_map = {tool.name: tool for tool in ALL_TOOLS}
 _runtime: Runtime | None = None
@@ -54,7 +67,25 @@ _runtime: Runtime | None = None
 def get_runtime() -> Runtime:
     global _runtime
     if _runtime is None:
-        settings = Settings.load()
+        try:
+            settings = Settings.load()
+        except AppStoreConnectMcpError as exc:
+            hint_lines = [
+                f"Configuration error: {exc.message}",
+                "",
+                "Required environment variables:",
+                "  APP_STORE_KEY_ID",
+                "  APP_STORE_ISSUER_ID",
+                "  APP_STORE_PRIVATE_KEY  (inline PEM or path to .p8 file)",
+                "  APP_STORE_BUNDLE_ID",
+                "",
+                "Set them in .env, a profile file (profiles/*.env), or the process environment.",
+                "See .env.example for a template.",
+            ]
+            if hasattr(exc, "details") and exc.details:
+                hint_lines.append(f"  Details: {exc.details}")
+            logger.error("\n".join(hint_lines))
+            raise
         token_provider = AppStoreJwtProvider(settings)
         _runtime = Runtime(
             settings=settings,
@@ -104,7 +135,7 @@ async def call_tool(name: str, arguments: dict | None):
         )
 
     try:
-        payload = definition.handler(get_runtime(), arguments or {})
+        payload = await asyncio.to_thread(definition.handler, get_runtime(), arguments or {})
         return _to_text(_finalize_payload(payload, completion_state="completed"))
     except Exception as exc:  # pragma: no cover - guarded by unit tests around payloads
         return _to_text(_finalize_payload(serialize_error(exc), completion_state="failed"))
@@ -116,8 +147,6 @@ async def main() -> None:
 
 
 def cli_main() -> None:
-    import asyncio
-
     asyncio.run(main())
 
 

@@ -74,13 +74,14 @@ def get_app_pricing(runtime: Any, arguments: dict[str, Any]) -> dict[str, Any]:
 
 READ_TOOLS = [
     ToolDefinition(
-        name="get_app_info",
+        name="asc_get_app_info",
         description="Fetch app metadata, bundle id, current version, and release state.",
         input_schema={"type": "object", "properties": {}, "additionalProperties": False},
+        annotations={'readOnlyHint': True, 'destructiveHint': False, 'idempotentHint': True, 'openWorldHint': True},
         handler=get_app_info,
     ),
     ToolDefinition(
-        name="get_app_listing",
+        name="asc_get_app_listing",
         description=(
             "Fetch localized App Store listing metadata, including description, keywords, "
             "subtitle, promotional text, what’s new, and screenshot summaries."
@@ -88,20 +89,22 @@ READ_TOOLS = [
         input_schema={
             "type": "object",
             "properties": {
-                "locale": {"type": "string", "description": "Store locale, for example en-US."},
+            "locale": {"type": "string", "description": "BCP 47 locale code, e.g. en-US, ja, de-DE."},
             },
             "additionalProperties": False,
         },
+        annotations={'readOnlyHint': True, 'destructiveHint': False, 'idempotentHint': True, 'openWorldHint': True},
         handler=get_app_listing,
     ),
     ToolDefinition(
-        name="get_app_versions",
+        name="asc_get_app_versions",
         description="List all App Store versions for the configured app with their states.",
         input_schema={"type": "object", "properties": {}, "additionalProperties": False},
+        annotations={'readOnlyHint': True, 'destructiveHint': False, 'idempotentHint': True, 'openWorldHint': True},
         handler=get_app_versions,
     ),
     ToolDefinition(
-        name="get_app_screenshots",
+        name="asc_get_app_screenshots",
         description="List screenshot sets and assets for a locale on the current App Store version.",
         input_schema={
             "type": "object",
@@ -110,12 +113,14 @@ READ_TOOLS = [
             },
             "additionalProperties": False,
         },
+        annotations={'readOnlyHint': True, 'destructiveHint': False, 'idempotentHint': True, 'openWorldHint': True},
         handler=get_app_screenshots,
     ),
     ToolDefinition(
-        name="get_app_pricing",
+        name="asc_get_app_pricing",
         description="Fetch the current app price schedule and availability relationships.",
         input_schema={"type": "object", "properties": {}, "additionalProperties": False},
+        annotations={'readOnlyHint': True, 'destructiveHint': False, 'idempotentHint': True, 'openWorldHint': True},
         handler=get_app_pricing,
     ),
 ]

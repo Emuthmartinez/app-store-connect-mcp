@@ -464,11 +464,12 @@ GENERIC_TOOLS = [
         input_schema={
             "type": "object",
             "properties": {
-                "include_runtime_entities": {"type": "boolean"},
-                "search": {"type": "string"},
+                "include_runtime_entities": {"type": "boolean", "description": "Include live runtime resource anchors. Defaults to true."},
+                "search": {"type": "string", "description": "Filter the endpoint catalog by resource type, category, or path keyword."},
             },
             "additionalProperties": False,
         },
+        annotations={'readOnlyHint': True, 'destructiveHint': False, 'idempotentHint': True, 'openWorldHint': True},
         handler=get_asc_api_capabilities,
     ),
     ToolDefinition(
@@ -477,12 +478,13 @@ GENERIC_TOOLS = [
         input_schema={
             "type": "object",
             "properties": {
-                "path": {"type": "string"},
-                "query": {"type": "object", "additionalProperties": True},
+                "path": {"type": "string", "description": "App Store Connect API path starting with /v1/."},
+                "query": {"type": "object", "additionalProperties": True, "description": "Query parameters as key-value pairs for filtering or pagination."},
             },
             "required": ["path"],
             "additionalProperties": False,
         },
+        annotations={'readOnlyHint': True, 'destructiveHint': False, 'idempotentHint': True, 'openWorldHint': True},
         handler=asc_api_get,
     ),
     ToolDefinition(
@@ -491,12 +493,13 @@ GENERIC_TOOLS = [
         input_schema={
             "type": "object",
             "properties": {
-                "path": {"type": "string"},
-                "query": {"type": "object", "additionalProperties": True},
+                "path": {"type": "string", "description": "App Store Connect API path starting with /v1/."},
+                "query": {"type": "object", "additionalProperties": True, "description": "Query parameters as key-value pairs for filtering or pagination."},
             },
             "required": ["path"],
             "additionalProperties": False,
         },
+        annotations={'readOnlyHint': True, 'destructiveHint': False, 'idempotentHint': True, 'openWorldHint': True},
         handler=asc_api_list,
     ),
     ToolDefinition(
@@ -505,14 +508,15 @@ GENERIC_TOOLS = [
         input_schema={
             "type": "object",
             "properties": {
-                "path": {"type": "string"},
-                "query": {"type": "object", "additionalProperties": True},
-                "body": {"type": "object", "additionalProperties": True},
-                "capture_state": {"type": "boolean"},
+                "path": {"type": "string", "description": "App Store Connect API path starting with /v1/."},
+                "query": {"type": "object", "additionalProperties": True, "description": "Query parameters as key-value pairs for filtering or pagination."},
+                "body": {"type": "object", "additionalProperties": True, "description": "JSON:API request body with data.type, data.attributes, and optional data.relationships."},
+                "capture_state": {"type": "boolean", "description": "Capture before/after snapshots for the mutation log. Defaults to true."},
             },
             "required": ["path", "body"],
             "additionalProperties": False,
         },
+        annotations={'readOnlyHint': False, 'destructiveHint': False, 'idempotentHint': False, 'openWorldHint': True},
         handler=asc_api_post,
     ),
     ToolDefinition(
@@ -521,14 +525,15 @@ GENERIC_TOOLS = [
         input_schema={
             "type": "object",
             "properties": {
-                "path": {"type": "string"},
-                "query": {"type": "object", "additionalProperties": True},
-                "body": {"type": "object", "additionalProperties": True},
-                "capture_state": {"type": "boolean"},
+                "path": {"type": "string", "description": "App Store Connect API path starting with /v1/."},
+                "query": {"type": "object", "additionalProperties": True, "description": "Query parameters as key-value pairs for filtering or pagination."},
+                "body": {"type": "object", "additionalProperties": True, "description": "JSON:API request body with data.type, data.attributes, and optional data.relationships."},
+                "capture_state": {"type": "boolean", "description": "Capture before/after snapshots for the mutation log. Defaults to true."},
             },
             "required": ["path", "body"],
             "additionalProperties": False,
         },
+        annotations={'readOnlyHint': False, 'destructiveHint': False, 'idempotentHint': True, 'openWorldHint': True},
         handler=asc_api_patch,
     ),
     ToolDefinition(
@@ -537,13 +542,14 @@ GENERIC_TOOLS = [
         input_schema={
             "type": "object",
             "properties": {
-                "path": {"type": "string"},
-                "query": {"type": "object", "additionalProperties": True},
-                "capture_state": {"type": "boolean"},
+                "path": {"type": "string", "description": "App Store Connect API path starting with /v1/."},
+                "query": {"type": "object", "additionalProperties": True, "description": "Query parameters as key-value pairs for filtering or pagination."},
+                "capture_state": {"type": "boolean", "description": "Capture before/after snapshots for the mutation log. Defaults to true."},
             },
             "required": ["path"],
             "additionalProperties": False,
         },
+        annotations={'readOnlyHint': False, 'destructiveHint': True, 'idempotentHint': True, 'openWorldHint': True},
         handler=asc_api_delete,
     ),
 ]

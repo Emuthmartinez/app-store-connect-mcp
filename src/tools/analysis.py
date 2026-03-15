@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from typing import Any
 
 from tooling import ToolDefinition
@@ -14,31 +15,68 @@ from tools.shared import (
 )
 
 
-BENCHMARK_NOTES = [
-    {
-        "lever": "paywall_model",
-        "benchmark": "Hard paywall with a 14-21 day trial outperforms freemium in the EV analysis.",
-    },
-    {
-        "lever": "pricing",
-        "benchmark": "The EV analysis recommends moving toward $12.99/month and $79.99/year pricing.",
-    },
-    {
-        "lever": "copy_positioning",
-        "benchmark": "Listing copy should emphasize durable styling value rather than AI novelty.",
-    },
-    {
-        "lever": "experimentation",
-        "benchmark": "Everything should be instrumented for A/B testing because experiment-heavy apps outperform materially.",
-    },
-]
+def _load_benchmark_notes() -> list[dict[str, Any]]:
+    """Load benchmark notes from ASC_BENCHMARK_NOTES env var or return empty list.
+
+    The env var should be a JSON array of objects with 'lever' and 'benchmark' keys.
+    """
+    raw = os.environ.get("ASC_BENCHMARK_NOTES", "").strip()
+    if not raw:
+        return []
+    import json
+
+    try:
+        notes = json.loads(raw)
+        if isinstance(notes, list):
+            return notes
+    except (json.JSONDecodeError, TypeError):
+        pass
+    return []
+
+
+def _load_copy_terms() -> dict[str, list[str]]:
+    """Load copy gap search terms from ASC_COPY_TERMS env var or return empty dict.
+
+    The env var should be a JSON object mapping area names to lists of terms.
+    Example: {"subtitle": ["ai", "stylist"], "keywords": ["ai", "stylist"]}
+    """
+    raw = os.environ.get("ASC_COPY_TERMS", "").strip()
+    if not raw:
+        return {}
+    import json
+
+    try:
+        terms = json.loads(raw)
+        if isinstance(terms, dict):
+            return terms
+    except (json.JSONDecodeError, TypeError):
+        pass
+    return {}
+
+
+def _load_preferred_keywords() -> list[str]:
+    """Load preferred keywords from ASC_PREFERRED_KEYWORDS env var or return empty list.
+
+    The env var should be a JSON array of keyword strings.
+    """
+    raw = os.environ.get("ASC_PREFERRED_KEYWORDS", "").strip()
+    if not raw:
+        return []
+    import json
+
+    try:
+        keywords = json.loads(raw)
+        if isinstance(keywords, list):
+            return [str(k) for k in keywords]
+    except (json.JSONDecodeError, TypeError):
+        pass
+    return []
 
 
 def _copy_gaps(snapshot: dict[str, Any]) -> list[dict[str, Any]]:
     gaps: list[dict[str, Any]] = []
     subtitle = (snapshot["app_info_localization"].get("subtitle") or "").lower()
     keywords = (snapshot["version_localization"].get("keywords") or "").lower()
-    description = snapshot["version_localization"].get("description") or ""
     promo = snapshot["version_localization"].get("promotionalText")
 
     if not promo:
@@ -50,33 +88,39 @@ def _copy_gaps(snapshot: dict[str, Any]) -> list[dict[str, Any]]:
             }
         )
 
-    if not any(term in subtitle for term in ("ai", "stylist", "outfit")):
+    copy_terms = _load_copy_terms()
+    subtitle_terms = copy_terms.get("subtitle", [])
+    if subtitle_terms and not any(term.lower() in subtitle for term in subtitle_terms):
         gaps.append(
             {
                 "severity": "high",
                 "area": "subtitle",
-                "reason": "Subtitle does not surface AI or stylist intent, which weakens conversion-oriented search positioning.",
+                "reason": f"Subtitle does not contain any of the configured target terms: {', '.join(subtitle_terms)}.",
             }
         )
 
-    if "ai" not in keywords and "stylist" not in keywords:
+    keyword_terms = copy_terms.get("keywords", [])
+    if keyword_terms and not any(term.lower() in keywords for term in keyword_terms):
         gaps.append(
             {
                 "severity": "high",
                 "area": "keywords",
-                "reason": "Keywords omit AI/stylist intent even though those are target ASO themes for this app.",
+                "reason": f"Keywords omit configured target terms: {', '.join(keyword_terms)}.",
             }
         )
 
-    first_fold = "\n".join(description.splitlines()[:3]).lower()
-    if "wardrobe" not in first_fold and "outfit" not in first_fold:
-        gaps.append(
-            {
-                "severity": "medium",
-                "area": "description",
-                "reason": "The first visible lines do not foreground wardrobe or outfit planning value strongly enough.",
-            }
-        )
+    description = snapshot["version_localization"].get("description") or ""
+    description_terms = copy_terms.get("description_first_fold", [])
+    if description_terms:
+        first_fold = "\n".join(description.splitlines()[:3]).lower()
+        if not any(term.lower() in first_fold for term in description_terms):
+            gaps.append(
+                {
+                    "severity": "medium",
+                    "area": "description",
+                    "reason": f"The first visible lines do not foreground configured terms: {', '.join(description_terms)}.",
+                }
+            )
 
     if snapshot["current_version"].get("appVersionState") in {"WAITING_FOR_REVIEW", "IN_REVIEW"}:
         gaps.append(
@@ -103,7 +147,7 @@ def get_listing_health(runtime: Any, arguments: dict[str, Any]) -> dict[str, Any
         "revenuecat": revenuecat,
         "observations": {
             "copy_gaps": _copy_gaps(snapshot),
-            "benchmark_notes": BENCHMARK_NOTES,
+            "benchmark_notes": _load_benchmark_notes(),
             "summary": {
                 "active_subscriptions": metrics.get("active_subscriptions"),
                 "active_trials": metrics.get("active_trials"),
@@ -121,16 +165,36 @@ def suggest_keyword_updates(runtime: Any, arguments: dict[str, Any]) -> dict[str
     revenuecat = runtime.revenuecat.get_overview()
     metrics = (revenuecat or {}).get("metrics", {})
 
-    preferred = [
-        "ai stylist",
-        "ai outfit",
-        "outfit planner",
-        "wardrobe app",
-        "closet app",
-        "style planner",
-        "wardrobe planner",
-    ]
+    preferred = _load_preferred_keywords()
+    if not preferred:
+        return {
+            "ok": True,
+            "locale": locale,
+            "current_keywords": normalized_current,
+            "current_keyword_char_count": keyword_length(current),
+            "proposed_keywords": None,
+            "note": (
+                "No preferred keywords configured. Set ASC_PREFERRED_KEYWORDS as a JSON array "
+                "of keyword strings to enable keyword suggestions."
+            ),
+        }
+
     proposed = build_keyword_string(preferred, limit=100)
+
+    rationale = [
+        "Proposed keywords are drawn from the configured ASC_PREFERRED_KEYWORDS list.",
+        "Keywords are packed to stay under Apple's 100 character limit.",
+    ]
+    if revenuecat:
+        rationale.append(
+            f"RevenueCat overview is currently reporting "
+            f"{metrics.get('active_subscriptions')} active subscriptions and "
+            f"{metrics.get('active_trials')} active trials."
+        )
+    else:
+        rationale.append(
+            "RevenueCat was not configured for this server session, so keyword advice is copy-driven only."
+        )
 
     return {
         "ok": True,
@@ -139,46 +203,58 @@ def suggest_keyword_updates(runtime: Any, arguments: dict[str, Any]) -> dict[str
         "current_keyword_char_count": keyword_length(current),
         "proposed_keywords": proposed,
         "proposed_keyword_char_count": len(proposed),
-        "rationale": [
-            "Shift toward AI and stylist intent that is missing from the current keyword set.",
-            "Keep high-intent wardrobe and outfit-planning phrases while staying under Apple’s 100 character limit.",
-            (
-                "RevenueCat overview is currently reporting "
-                f"{metrics.get('active_subscriptions')} active subscriptions and "
-                f"{metrics.get('active_trials')} active trials, so discovery intent still needs to be tightened."
-            )
-            if revenuecat
-            else "RevenueCat was not configured for this server session, so keyword advice is copy-driven only.",
-        ],
+        "rationale": rationale,
     }
 
 
 ANALYSIS_TOOLS = [
     ToolDefinition(
-        name="get_listing_health",
+        name="asc_get_listing_health",
         description=(
             "Pull the current listing plus RevenueCat overview metrics and compare them "
-            "against conversion-oriented listing heuristics."
+            "against conversion-oriented listing heuristics. Configure heuristics via "
+            "ASC_COPY_TERMS and ASC_BENCHMARK_NOTES environment variables."
         ),
         input_schema={
             "type": "object",
             "properties": {
-                "locale": {"type": "string"},
+                "locale": {
+                    "type": "string",
+                    "description": "BCP 47 locale code, e.g. en-US, ja, de-DE.",
+                },
             },
             "additionalProperties": False,
         },
         handler=get_listing_health,
+        annotations={
+            "readOnlyHint": True,
+            "destructiveHint": False,
+            "idempotentHint": True,
+            "openWorldHint": True,
+        },
     ),
     ToolDefinition(
-        name="suggest_keyword_updates",
-        description="Suggest a new keyword set based on the current listing and RevenueCat overview signals.",
+        name="asc_suggest_keyword_updates",
+        description=(
+            "Suggest a new keyword set based on the current listing and RevenueCat overview signals. "
+            "Configure preferred keywords via the ASC_PREFERRED_KEYWORDS environment variable."
+        ),
         input_schema={
             "type": "object",
             "properties": {
-                "locale": {"type": "string"},
+                "locale": {
+                    "type": "string",
+                    "description": "BCP 47 locale code, e.g. en-US, ja, de-DE.",
+                },
             },
             "additionalProperties": False,
         },
         handler=suggest_keyword_updates,
+        annotations={
+            "readOnlyHint": True,
+            "destructiveHint": False,
+            "idempotentHint": True,
+            "openWorldHint": True,
+        },
     ),
 ]

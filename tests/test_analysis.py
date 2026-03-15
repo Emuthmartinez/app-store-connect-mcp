@@ -106,11 +106,19 @@ class Runtime:
         self.change_logger = ChangeLogger(self.settings.change_log_path)
 
 
-def test_keyword_suggestion_stays_within_apple_limit() -> None:
+def test_keyword_suggestion_stays_within_apple_limit(monkeypatch) -> None:
+    monkeypatch.setenv("ASC_PREFERRED_KEYWORDS", '["ai stylist", "outfit planner", "wardrobe app"]')
     payload = suggest_keyword_updates(Runtime(), {"locale": "en-US"})
 
     assert payload["proposed_keyword_char_count"] <= 100
     assert "ai stylist" in payload["proposed_keywords"]
+
+
+def test_keyword_suggestion_without_config() -> None:
+    payload = suggest_keyword_updates(Runtime(), {"locale": "en-US"})
+
+    assert payload["proposed_keywords"] is None
+    assert "ASC_PREFERRED_KEYWORDS" in payload["note"]
 
 
 def test_listing_health_flags_missing_promotional_text() -> None:

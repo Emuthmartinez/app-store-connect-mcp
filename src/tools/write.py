@@ -73,7 +73,7 @@ def update_description(runtime: Any, arguments: dict[str, Any]) -> dict[str, Any
         runtime,
         locale=locale,
         operation="update_description",
-        field_name="description",
+        field_name="asc_description",
         new_value=description,
     )
 
@@ -93,7 +93,7 @@ def update_keywords(runtime: Any, arguments: dict[str, Any]) -> dict[str, Any]:
         runtime,
         locale=locale,
         operation="update_keywords",
-        field_name="keywords",
+        field_name="asc_keywords",
         new_value=keywords,
     )
 
@@ -139,7 +139,7 @@ def update_subtitle(runtime: Any, arguments: dict[str, Any]) -> dict[str, Any]:
         runtime,
         locale=locale,
         operation="update_subtitle",
-        field_name="subtitle",
+        field_name="asc_subtitle",
         new_value=subtitle,
     )
 
@@ -249,40 +249,42 @@ def submit_for_review(runtime: Any, arguments: dict[str, Any]) -> dict[str, Any]
 
 WRITE_TOOLS = [
     ToolDefinition(
-        name="update_description",
+        name="asc_update_description",
         description="Update the localized App Store description for the current version.",
         input_schema={
             "type": "object",
             "properties": {
-                "locale": {"type": "string"},
-                "description": {"type": "string"},
+                "locale": {"type": "string", "description": "BCP 47 locale code, e.g. en-US, ja, de-DE."},
+                "description": {"type": "string", "description": "Full App Store description text."},
             },
             "required": ["locale", "description"],
             "additionalProperties": False,
         },
+        annotations={'readOnlyHint': False, 'destructiveHint': False, 'idempotentHint': True, 'openWorldHint': True},
         handler=update_description,
     ),
     ToolDefinition(
-        name="update_keywords",
+        name="asc_update_keywords",
         description="Update localized App Store keywords for the current version.",
         input_schema={
             "type": "object",
             "properties": {
-                "locale": {"type": "string"},
-                "keywords": {"type": "string"},
+                "locale": {"type": "string", "description": "BCP 47 locale code, e.g. en-US, ja, de-DE."},
+                "keywords": {"type": "string", "description": "Comma-separated keyword string, max 100 characters total."},
             },
             "required": ["locale", "keywords"],
             "additionalProperties": False,
         },
+        annotations={'readOnlyHint': False, 'destructiveHint': False, 'idempotentHint': True, 'openWorldHint': True},
         handler=update_keywords,
     ),
     ToolDefinition(
-        name="update_promotional_text",
+        name="asc_update_promotional_text",
         description="Update promotional text, which can change without shipping a new version.",
         input_schema={
             "type": "object",
             "properties": {
-                "locale": {"type": "string"},
+                "locale": {"type": "string", "description": "BCP 47 locale code, e.g. en-US, ja, de-DE."},
                 "promotional_text": {
                     "type": ["string", "null"],
                     "description": "Use null to clear the field.",
@@ -291,55 +293,60 @@ WRITE_TOOLS = [
             "required": ["locale"],
             "additionalProperties": False,
         },
+        annotations={'readOnlyHint': False, 'destructiveHint': False, 'idempotentHint': True, 'openWorldHint': True},
         handler=update_promotional_text,
     ),
     ToolDefinition(
-        name="update_whats_new",
+        name="asc_update_whats_new",
         description="Update the localized What’s New text for the current version.",
         input_schema={
             "type": "object",
             "properties": {
-                "locale": {"type": "string"},
-                "whats_new": {"type": "string"},
+                "locale": {"type": "string", "description": "BCP 47 locale code, e.g. en-US, ja, de-DE."},
+                "whats_new": {"type": "string", "description": "What's New release notes for the current version."},
             },
             "required": ["locale", "whats_new"],
             "additionalProperties": False,
         },
+        annotations={'readOnlyHint': False, 'destructiveHint': False, 'idempotentHint': True, 'openWorldHint': True},
         handler=update_whats_new,
     ),
     ToolDefinition(
-        name="update_subtitle",
+        name="asc_update_subtitle",
         description="Update the localized subtitle in App Store Connect.",
         input_schema={
             "type": "object",
             "properties": {
-                "locale": {"type": "string"},
-                "subtitle": {"type": "string"},
+                "locale": {"type": "string", "description": "BCP 47 locale code, e.g. en-US, ja, de-DE."},
+                "subtitle": {"type": "string", "description": "App subtitle, max 30 characters."},
             },
             "required": ["locale", "subtitle"],
             "additionalProperties": False,
         },
+        annotations={'readOnlyHint': False, 'destructiveHint': False, 'idempotentHint': True, 'openWorldHint': True},
         handler=update_subtitle,
     ),
     ToolDefinition(
-        name="upload_screenshot",
+        name="asc_upload_screenshot",
         description="Upload a screenshot into a locale/display-type screenshot set.",
         input_schema={
             "type": "object",
             "properties": {
-                "locale": {"type": "string"},
-                "display_type": {"type": "string"},
-                "file_path": {"type": "string"},
+                "locale": {"type": "string", "description": "BCP 47 locale code, e.g. en-US, ja, de-DE."},
+                "display_type": {"type": "string", "description": "Screenshot display type, e.g. APP_IPHONE_67, APP_IPAD_PRO_129."},
+                "file_path": {"type": "string", "description": "Absolute path to the screenshot image file on disk."},
             },
             "required": ["locale", "display_type", "file_path"],
             "additionalProperties": False,
         },
+        annotations={'readOnlyHint': False, 'destructiveHint': False, 'idempotentHint': False, 'openWorldHint': True},
         handler=upload_screenshot,
     ),
     ToolDefinition(
-        name="submit_for_review",
+        name="asc_submit_for_review",
         description="Submit the current editable version for App Review.",
         input_schema={"type": "object", "properties": {}, "additionalProperties": False},
+        annotations={'readOnlyHint': False, 'destructiveHint': False, 'idempotentHint': True, 'openWorldHint': True},
         handler=submit_for_review,
     ),
 ]
