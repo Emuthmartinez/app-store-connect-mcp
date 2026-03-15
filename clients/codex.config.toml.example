@@ -1,0 +1,6 @@
+[mcp_servers.app_store_connect]
+command = "python3"
+args = ["/Users/openclawmac/mcp-servers/app-store-connect-mcp/src/index.py"]
+
+[mcp_servers.app_store_connect.env]
+APP_STORE_CONNECT_MCP_ENV = "/Users/openclawmac/mcp-servers/app-store-connect-mcp/profiles/clueless.env"

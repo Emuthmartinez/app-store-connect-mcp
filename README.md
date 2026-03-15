@@ -177,3 +177,22 @@ Example registration:
 
 Point the server at an app-specific env file with `APP_STORE_CONNECT_MCP_ENV`
 when you need per-business credentials without duplicating the repo.
+
+## Codex / Claude Setup
+
+Ready-made client snippets live in `clients/`:
+
+- `clients/codex.config.toml.example`
+- `clients/mcp.json.example`
+- `clients/claude.mcpServers.json.example`
+
+The default examples point at the Mac mini path:
+
+- server: `/Users/openclawmac/mcp-servers/app-store-connect-mcp/src/index.py`
+- app-specific env: `/Users/openclawmac/mcp-servers/app-store-connect-mcp/profiles/clueless.env`
+
+Recommended flow:
+
+1. Copy `profiles/clueless.env.example` to `profiles/clueless.env`
+2. Fill in the app-specific credentials there
+3. Copy the matching client snippet into Codex or Claude MCP config

@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "app-store-connect-mcp": {
+      "command": "python3",
+      "args": [
+        "/Users/openclawmac/mcp-servers/app-store-connect-mcp/src/index.py"
+      ],
+      "env": {
+        "APP_STORE_CONNECT_MCP_ENV": "/Users/openclawmac/mcp-servers/app-store-connect-mcp/profiles/clueless.env"
+      }
+    }
+  }
+}
