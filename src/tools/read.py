@@ -109,7 +109,7 @@ READ_TOOLS = [
         input_schema={
             "type": "object",
             "properties": {
-                "locale": {"type": "string", "description": "Store locale, for example en-US."},
+                "locale": {"type": "string", "description": "BCP 47 locale code, e.g. en-US, ja, de-DE."},
             },
             "additionalProperties": False,
         },
