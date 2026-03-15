@@ -1,0 +1,19 @@
+[project]
+name = "app-store-connect-mcp"
+version = "0.1.0"
+description = "Reusable App Store Connect MCP server for listing, versioning, and experimentation workflows."
+requires-python = ">=3.11"
+dependencies = [
+  "cryptography>=45.0.0",
+  "mcp>=1.0.0",
+  "PyJWT>=2.9.0",
+  "requests>=2.32.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
