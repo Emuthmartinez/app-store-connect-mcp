@@ -1,6 +1,6 @@
 # Change Impact Analysis
 
-This is the feature that makes StorePilot different from every other
+This is the feature that makes App Store Connect MCP different from every other
 ASO tool. Here's how it works, how to use it, and its limits.
 
 ## The problem
@@ -9,7 +9,7 @@ You change your keywords. Did it move anything? Most ASO tools will
 show you ranking movements or impression share. Neither of those is
 the metric you care about: revenue.
 
-Every listing mutation StorePilot executes is logged to
+Every listing mutation the server executes is logged to
 `data/changes.jsonl` with:
 
 - Timestamp
@@ -87,7 +87,7 @@ Bad uses:
 - Claiming causation in a marketing email
 - Running a one-shot experiment where N=1
 - Replacing proper A/B testing (use Product Page Optimization experiments
-  for that — StorePilot has tools for those too)
+  for that — this server has tools for those too)
 
 ## Recommended workflow
 

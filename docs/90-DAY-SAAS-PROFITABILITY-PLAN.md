@@ -283,9 +283,9 @@ This is your "brand consolidation" move. Same audience, same pain, one product:
 - `gpc_get_listing_health` — health scoring
 - `gpc_get_reviews` — review monitoring
 
-Rename the product from "App Store Connect MCP" to something broader:
-- **"StorePilot"** or **"ListingAgent"** or **"AppLaunch MCP"**
-- Now you're not just iOS — you're THE AI-native app store management tool
+Consider renaming the product to something broader once you have cross-platform support:
+- Keep "App Store Connect MCP" for now (strong SEO, descriptive)
+- Rebrand only when Google Play support ships and a short brand name is validated as available
 
 New pricing angle:
 - Pro: 1 platform (iOS or Android), $29/mo
@@ -325,7 +325,7 @@ By now you have data on where people drop off. Fix the top 3 friction points. Co
 
 Now that you have Google Play support + paying customers + case studies:
 
-- **Product Hunt re-launch**: "StorePilot 2.0 — AI-Native App Store Management for iOS & Android"
+- **Product Hunt re-launch**: "App Store Connect MCP 2.0 — AI-Native App Store Management for iOS & Android"
 - **Hacker News**: "Show HN: I built an MCP server that manages App Store and Play Store listings"
 - **New articles** with real customer metrics: "How [Customer] increased conversions 23% using AI-powered ASO"
 - **TikTok/X push**: New demo videos showing cross-platform management

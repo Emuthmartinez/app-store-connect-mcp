@@ -1,4 +1,4 @@
-# StorePilot / App Store Connect MCP — Documentation
+# App Store Connect MCP — Documentation
 
 This directory is the source for the docs site. It's structured to be
 published with Mintlify or Docusaurus with minimal adaptation.

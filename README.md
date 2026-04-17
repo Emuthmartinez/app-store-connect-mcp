@@ -1,4 +1,4 @@
-# StorePilot — App Store Connect MCP
+# App Store Connect MCP
 
 > AI-native App Store Connect management. Open-source MCP server with revenue-correlation built in.
 

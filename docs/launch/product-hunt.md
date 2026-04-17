@@ -11,7 +11,7 @@ Alternates (test them):
 
 ## Short description (≤260 chars)
 
-StorePilot is an open-source MCP server that lets AI agents (Claude, Cursor, Codex, n8n) read and update your App Store Connect listings — keywords, screenshots, descriptions, experiments — and correlate every change with your RevenueCat MRR.
+App Store Connect MCP is an open-source server that lets AI agents (Claude, Cursor, Codex, n8n) read and update your App Store Connect listings — keywords, screenshots, descriptions, experiments — and correlate every change with your RevenueCat MRR.
 
 ## Topics
 
@@ -51,11 +51,11 @@ StorePilot is an open-source MCP server that lets AI agents (Claude, Cursor, Cod
 
 **0:25** Claude calls `asc_get_change_impact_analysis`. Show the result — MRR up 22.1%, subscriptions up 18.3%, with the caveat displayed.
 
-**0:35** "Every listing change is logged with your RevenueCat metrics. StorePilot correlates them automatically."
+**0:35** "Every listing change is logged with your RevenueCat metrics. The MCP server correlates them automatically."
 
 **0:42** "Open source. MIT. Self-host it, or get the hosted version for $29 a month."
 
-**0:52** Call-to-action card: *storepilot.app · github.com/Emuthmartinez/app-store-connect-mcp*
+**0:52** Call-to-action card: *github.com/Emuthmartinez/app-store-connect-mcp*
 
 ## Maker comment (for the launch post)
 
@@ -65,28 +65,27 @@ Hi Product Hunt 👋
 
 I'm Eduardo, and I build iOS apps. Every version release, I'd spend an hour in App Store Connect — tweaking keywords, rewriting descriptions, swapping screenshots. The worst part wasn't the time, it was never knowing whether any of it moved the needle.
 
-So I built StorePilot, an MCP server that lets AI agents do the work for me. But the real unlock is `asc_get_change_impact_analysis`: every listing mutation is logged with a snapshot of my RevenueCat metrics at the time of change. I can ask Claude "did my keyword update last week correlate with a revenue lift?" and get a real answer.
+So I built App Store Connect MCP, an open-source server that lets AI agents do the work for me. But the real unlock is `asc_get_change_impact_analysis`: every listing mutation is logged with a snapshot of my RevenueCat metrics at the time of change. I can ask Claude "did my keyword update last week correlate with a revenue lift?" and get a real answer.
 
 The core is open source under MIT. Self-host it forever, or use the hosted cloud tier ($29/mo) if you don't want to run anything. Weekly health reports, Slack alerts, Google Play Console parity in Phase 3.
 
 Would love your feedback — especially if you've been frustrated with ASO tools that don't connect to revenue.
 
 Links:
-- Landing: https://storepilot.app
 - GitHub: https://github.com/Emuthmartinez/app-store-connect-mcp
-- Discord: https://discord.gg/storepilot
+- Docs: https://github.com/Emuthmartinez/app-store-connect-mcp/tree/main/docs
 
 ## Hunter outreach DM template
 
 Hey [name] —
 
-I'm launching StorePilot on Product Hunt on [day]. It's an MCP server that lets Claude manage App Store Connect listings, with a RevenueCat-correlated change impact tool that's the real unlock.
+I'm launching App Store Connect MCP on Product Hunt on [day]. It's an open-source MCP server that lets Claude manage App Store Connect listings, with a RevenueCat-correlated change impact tool that's the real unlock.
 
 Built it after spending way too many hours in ASC every release. Open source, MIT, already have [N] GitHub stars.
 
 Would you be willing to hunt it? Happy to prep all the assets, just need your green light.
 
-Here's a preview: [storepilot.app preview URL]
+Here's a preview: [github.com/Emuthmartinez/app-store-connect-mcp]
 
 No worries either way — thanks for what you do.
 
@@ -96,7 +95,7 @@ No worries either way — thanks for what you do.
 - [ ] Hunter confirmed 1 week ahead
 - [ ] Hero image, gallery images, and demo video uploaded
 - [ ] Landing page loads in <1s, mobile-responsive
-- [ ] `storepilot.app/signup` redirect tested end-to-end
+- [ ] Cloud signup flow tested end-to-end
 - [ ] Discord server has a #launch channel pinned
 - [ ] 5 friends / team members ready to comment substantively (NOT "congrats", actual questions/feedback)
 - [ ] Cross-post ready for X, LinkedIn, IndieHackers, Reddit r/iOSProgramming

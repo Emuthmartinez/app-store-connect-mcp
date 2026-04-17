@@ -7,7 +7,7 @@ long-lived process.
 ## Minting an ASC API key
 
 1. Go to [App Store Connect → Users and Access → Keys](https://appstoreconnect.apple.com/access/api).
-2. Click **Generate API Key**. Name it "StorePilot" (or whatever you'll remember).
+2. Click **Generate API Key**. Name it "ASC MCP" (or whatever you'll remember).
 3. Grant it **Admin** access (listing edits require it).
 4. Download the `.p8` file. **You can only download it once.** Keep it safe.
 5. Note the **Key ID** (10 characters) and the **Issuer ID** (UUID at the top of the page).
@@ -24,7 +24,7 @@ You already know this — it's in your Xcode target under Bundle Identifier.
 
 ## Configuration files
 
-StorePilot loads configuration in this order (later overrides earlier):
+App Store Connect MCP loads configuration in this order (later overrides earlier):
 
 1. `.env` in the repo root
 2. Path in `APP_STORE_CONNECT_MCP_ENV` env var
@@ -94,17 +94,17 @@ Without a URL, notifications no-op. See `src/notifications.py` for the API.
 ### systemd (Linux)
 
 ```ini
-# /etc/systemd/system/storepilot.service
+# /etc/systemd/system/asc-mcp.service
 [Unit]
-Description=StorePilot MCP server
+Description=App Store Connect MCP server
 After=network.target
 
 [Service]
 Type=simple
-User=storepilot
-WorkingDirectory=/opt/storepilot
-EnvironmentFile=/opt/storepilot/.env
-ExecStart=/usr/bin/python3 /opt/storepilot/src/index.py
+User=ascmcp
+WorkingDirectory=/opt/asc-mcp
+EnvironmentFile=/opt/asc-mcp/.env
+ExecStart=/usr/bin/python3 /opt/asc-mcp/src/index.py
 Restart=on-failure
 
 [Install]
@@ -114,25 +114,25 @@ WantedBy=multi-user.target
 ### launchd (macOS)
 
 ```xml
-<!-- ~/Library/LaunchAgents/com.storepilot.server.plist -->
+<!-- ~/Library/LaunchAgents/com.asc-mcp.server.plist -->
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>Label</key><string>com.storepilot.server</string>
+  <key>Label</key><string>com.asc-mcp.server</string>
   <key>ProgramArguments</key>
   <array>
     <string>/usr/local/bin/python3</string>
-    <string>/opt/storepilot/src/index.py</string>
+    <string>/opt/asc-mcp/src/index.py</string>
   </array>
   <key>KeepAlive</key><true/>
-  <key>WorkingDirectory</key><string>/opt/storepilot</string>
-  <key>StandardErrorPath</key><string>/tmp/storepilot.err</string>
+  <key>WorkingDirectory</key><string>/opt/asc-mcp</string>
+  <key>StandardErrorPath</key><string>/tmp/asc-mcp.err</string>
 </dict>
 </plist>
 ```
 
-Load with `launchctl load ~/Library/LaunchAgents/com.storepilot.server.plist`.
+Load with `launchctl load ~/Library/LaunchAgents/com.asc-mcp.server.plist`.
 
 ## Troubleshooting
 

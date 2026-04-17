@@ -12,7 +12,7 @@ What I actually want is: "Claude, my new onboarding flow is way better. Update t
 
 That tool didn't exist. So I built it.
 
-## StorePilot: App Store Connect as an MCP server
+## App Store Connect as an MCP server
 
 If you've been following the MCP (Model Context Protocol) space, you know the pitch: instead of hacking together a custom script that uses the OpenAI function-calling API, you expose your tool as an MCP server, and *any* MCP-compatible client (Claude Desktop, Cursor, Codex, Claude Code, n8n, custom agents) can use it.
 
@@ -60,7 +60,7 @@ Result:
 
 ## How you can use it
 
-StorePilot is open source (MIT). You can:
+App Store Connect MCP is open source (MIT). You can:
 
 **Self-host** (free, forever):
 ```bash
@@ -83,4 +83,4 @@ Then register it with Claude Desktop, Cursor, or any MCP client. Point it at you
 If you ship iOS apps and you're comfortable with Claude or Cursor, give it a try. If you break things, you know where to find me.
 
 **Repo:** https://github.com/Emuthmartinez/app-store-connect-mcp
-**Cloud:** https://storepilot.app
+**Cloud:** https://github.com/Emuthmartinez/app-store-connect-mcp#cloud-setup

@@ -6,7 +6,7 @@ use to connect.
 
 ## Sign up
 
-1. Go to [storepilot.app/signup](https://storepilot.app/signup).
+1. Go to the cloud signup page (URL TBD once domain is chosen).
 2. Choose a plan (Pro / Team / Enterprise). 14-day free trial, no card.
 3. You land on the dashboard.
 
@@ -40,8 +40,8 @@ Add to `claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
-    "storepilot-cloud": {
-      "url": "https://api.storepilot.app/v1/sse",
+    "asc-mcp-cloud": {
+      "url": "https://your-cloud-host/v1/sse",
       "headers": {
         "Authorization": "Bearer ascmcp_your_key_here"
       }
@@ -57,7 +57,7 @@ Restart Claude Desktop. Tools should appear with the `asc_` prefix.
 For custom integrations:
 
 ```bash
-curl -X POST https://api.storepilot.app/v1/tools/call \
+curl -X POST https://your-cloud-host/v1/tools/call \
   -H "Authorization: Bearer ascmcp_your_key" \
   -H "Content-Type: application/json" \
   -d '{

@@ -4,13 +4,13 @@
 
 ---
 
-This is a deep technical tour of StorePilot, an open-source MCP server that lets AI agents manage Apple App Store Connect listings. We'll cover every tool category, the RevenueCat integration that makes it different, and a quick-start you can follow in 10 minutes.
+This is a deep technical tour of App Store Connect MCP, an open-source MCP server that lets AI agents manage Apple App Store Connect listings. We'll cover every tool category, the RevenueCat integration that makes it different, and a quick-start you can follow in 10 minutes.
 
 ## What is an MCP server, briefly
 
 The Model Context Protocol (MCP) is a standardized way for AI assistants to talk to external tools. An MCP server exposes a catalog of tools, each with a name, JSON schema, and handler. An MCP client (Claude Desktop, Cursor, n8n, custom agent, …) discovers those tools and calls them on behalf of the model.
 
-StorePilot runs as a stdio MCP server: the client launches a Python process, sends JSON-RPC requests over stdin/stdout, and gets results back.
+App Store Connect MCP runs as a stdio MCP server: the client launches a Python process, sends JSON-RPC requests over stdin/stdout, and gets results back.
 
 ## Tool categories
 
@@ -42,7 +42,7 @@ Create / update / delete PPO experiments and treatments. Run A/B tests without t
 ### Change impact analysis (the moat)
 `asc_get_change_impact_analysis` correlates your listing mutations with your RevenueCat metrics. For each recent change, it averages active_subscriptions, active_trials, and MRR in the N days before vs. after the change, and returns percent deltas.
 
-This is the reason I built StorePilot. No other ASO tool does this. It turns "I shipped a keyword change" into "I shipped a keyword change and my trials went up 12% the following week."
+This is the reason I built this tool. No other ASO tool does this. It turns "I shipped a keyword change" into "I shipped a keyword change and my trials went up 12% the following week."
 
 ### Diagnostics (1 tool)
 `asc_test_connection` verifies every upstream: credentials, JWT mint, ASC app lookup, RevenueCat overview. Run this first if anything's acting up.

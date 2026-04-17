@@ -1,6 +1,6 @@
 # Quick Start
 
-Get StorePilot running with Claude Desktop in 10 minutes.
+Get App Store Connect MCP running with Claude Desktop in 10 minutes.
 
 ## 1. Prerequisites
 
