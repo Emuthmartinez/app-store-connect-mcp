@@ -1,22 +1,28 @@
-# App Store Connect MCP
+# StorePilot — App Store Connect MCP
 
-Reusable stdio MCP server for App Store Connect listing automation.
+> AI-native App Store Connect management. Open-source MCP server with revenue-correlation built in.
 
-App-agnostic — point it at any app by supplying a different env file.
+Two ways to run it:
+
+- **Self-hosted (free, MIT)**: Run `python3 src/index.py`, register with any MCP client (Claude Desktop, Cursor, Codex, n8n…), done. See [docs/quick-start.md](docs/quick-start.md).
+- **Hosted cloud ($29–$199/mo)**: Managed endpoint, Stripe billing, weekly health reports, Slack/Discord alerts, audit log UI. See [docs/cloud-setup.md](docs/cloud-setup.md).
 
 ## What It Does
 
-- Reads and updates App Store listing metadata (description, keywords, subtitle, promotional text, What's New).
-- Uploads screenshots into existing or newly created screenshot sets.
-- Manages App Store versions: create, assign builds, submit for review, release.
-- Full Custom Product Page lifecycle: create, version, localize, upload screenshots, attach to review submissions.
-- Product page optimization experiments: create, configure treatments, start/stop.
-- Generic App Store Connect API verbs (`asc_api_get`, `asc_api_post`, etc.) for endpoints without dedicated wrappers.
-- Every mutation is logged with before/after snapshots to `data/changes.jsonl`.
-- All tool responses include `completion_state` and `should_continue` for agentic workflows.
+- **Read & mutate listings** — description, keywords, subtitle, promo text, What's New, screenshots.
+- **Manage versions** — create, assign builds, submit for review, release.
+- **Custom Product Pages** — full CRUD with version/localization/screenshot lifecycle.
+- **Product Page Optimization** — experiments and treatments without opening ASC.
+- **Revenue-correlation moat** — `asc_get_change_impact_analysis` correlates every listing mutation with your RevenueCat metrics. See [docs/change-impact.md](docs/change-impact.md).
+- **Scheduled weekly reports** — health score + revenue trend + change impact, piped to email/Slack.
+- **Slack/Discord alerts** — MRR shifts, health score drops, review state transitions.
+- **Diagnostics** — `asc_test_connection` isolates which upstream is broken when something fails.
+- **Google Play Console** (Phase 3 scaffold) — cross-platform parity coming in `gpc_*` tools.
+- **Generic ASC verbs** — `asc_api_get/post/patch/delete` for any endpoint we don't wrap yet.
+- **Audit trail** — every mutation logs before/after diff + RevenueCat snapshot to `data/changes.jsonl`.
+- **Agentic-ready** — every response includes `completion_state` and `should_continue`.
 
-All tool names are prefixed with `asc_` to prevent collisions when used alongside other MCP servers.
-Every tool includes MCP annotations (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`) so clients can auto-approve reads and gate destructive operations.
+All tool names are prefixed with `asc_` (or `gpc_` for Play) to prevent collisions when used alongside other MCP servers. Every tool includes MCP annotations (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`) so clients can auto-approve reads and gate destructive operations.
 
 ## Why RevenueCat?
 
@@ -129,7 +135,7 @@ GitHub Actions runs `ruff check`, `ruff format --check`, and `pytest` on Python 
 
 ## Tool Reference
 
-All 54 tools are prefixed with `asc_` and include MCP annotations. Key categories:
+60+ tools, all prefixed with `asc_` (or `gpc_` for Play scaffolds) and all include MCP annotations. Key categories:
 
 **Listing reads:** `asc_get_app_info`, `asc_get_app_listing`, `asc_get_app_versions`, `asc_get_app_screenshots`, `asc_get_app_pricing`
 
@@ -147,6 +153,12 @@ All 54 tools are prefixed with `asc_` and include MCP annotations. Key categorie
 
 **Analysis:** `asc_get_listing_health`, `asc_suggest_keyword_updates`
 
+**Change impact (revenue correlation):** `asc_get_change_impact_analysis`
+
+**Diagnostics:** `asc_test_connection`
+
+**Google Play (scaffold, Phase 3):** `gpc_get_app_listing`, `gpc_update_listing`, `gpc_get_listing_health`, `gpc_get_reviews`, `gpc_upload_screenshot`
+
 **Subscriber:** `asc_refresh_subscriber_overview`, `asc_get_subscriber_snapshot`, `asc_list_subscriber_events`, `asc_list_subscriber_overview_history`
 
 ## ASC API Behavioral Notes
@@ -154,6 +166,27 @@ All 54 tools are prefixed with `asc_` and include MCP annotations. Key categorie
 - `asc_create_review_submission` can create a fresh submission even when one is already waiting for review. Agents should read current review state first.
 - `asc_create_custom_product_page` creates the initial draft version and localization inline. `asc_create_custom_product_page_version` will return a `409` until the current version is no longer inflight.
 - Generic mutation tools (`asc_api_post`, `asc_api_patch`, `asc_api_delete`) log before/after snapshots and RevenueCat metrics to the change log.
+
+## Running the Cloud Gateway (self-hosting the hosted tier)
+
+If you want to host the multi-tenant cloud mode yourself:
+
+```bash
+python3 src/cloud/server.py
+```
+
+This launches the HTTP/SSE gateway on `0.0.0.0:8080` (configurable via
+`ASCMCP_CLOUD_HOST` / `ASCMCP_CLOUD_PORT`). Tenants and API keys persist
+to `./data/cloud/`. See [docs/cloud-setup.md](docs/cloud-setup.md) for
+the full protocol and billing hookup.
+
+## Roadmap
+
+- **Phase 1** (shipped): Core MCP server, RevenueCat integration, analysis, CPP, experiments, generic verbs, **change impact analysis**, **diagnostics**, **cloud gateway**, **multi-tenant runtime**, **Stripe billing scaffolding**, **Slack/Discord notifications**, **weekly health reports**.
+- **Phase 2**: Hosted cloud GA, Product Hunt launch, docs site, content flywheel.
+- **Phase 3**: Google Play Console integration, SSO + audit log UI, enterprise RBAC, annual plans + referrals.
+
+See [docs/90-DAY-SAAS-PROFITABILITY-PLAN.md](docs/90-DAY-SAAS-PROFITABILITY-PLAN.md) for the detailed roadmap.
 
 ## License
 

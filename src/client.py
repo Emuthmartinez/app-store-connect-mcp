@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import hashlib
 import time
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 from urllib.parse import urlencode
 from uuid import uuid4
 
@@ -14,7 +15,6 @@ import requests
 from auth import AppStoreJwtProvider
 from config import Settings
 from errors import AscApiError, ResourceNotFoundError
-
 
 JsonDict = dict[str, Any]
 

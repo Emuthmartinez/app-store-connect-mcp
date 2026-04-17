@@ -8,7 +8,6 @@ from urllib.parse import urlencode
 from errors import ConfigurationError, serialize_error
 from tooling import ToolDefinition
 
-
 JSON_API_HINTS = {
     "request_shape": {
         "data": {

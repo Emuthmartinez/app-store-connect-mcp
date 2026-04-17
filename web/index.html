@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>StorePilot — AI-native App Store Management</title>
+  <meta name="description" content="Let AI agents manage your App Store listings. Open-source MCP server for App Store Connect with built-in revenue correlation." />
+  <meta property="og:title" content="StorePilot — AI-native App Store Management" />
+  <meta property="og:description" content="Let AI agents manage your App Store listings. Open-source MCP server with built-in revenue correlation." />
+  <meta property="og:type" content="website" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="nav">
+    <a class="brand" href="/">
+      <span class="brand-mark">◉</span> StorePilot
+    </a>
+    <nav>
+      <a href="#features">Features</a>
+      <a href="#pricing">Pricing</a>
+      <a href="/docs">Docs</a>
+      <a href="https://github.com/Emuthmartinez/app-store-connect-mcp" target="_blank" rel="noopener">GitHub</a>
+      <a class="btn btn-primary" href="#signup">Start free</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-inner">
+        <span class="badge">Open source · MIT · 60+ MCP tools</span>
+        <h1>Your App Store listings, managed by AI agents.</h1>
+        <p class="lede">
+          StorePilot is an MCP server that lets Claude, Codex, Cursor, or any
+          MCP-compatible agent read and update your App Store Connect
+          listings — keywords, descriptions, screenshots, Custom Product
+          Pages, experiments — and correlate every change with your
+          RevenueCat metrics.
+        </p>
+        <div class="cta-row">
+          <a class="btn btn-primary btn-lg" href="#signup">Start Pro free for 14 days</a>
+          <a class="btn btn-ghost btn-lg" href="/docs/self-host">Self-host (free)</a>
+        </div>
+        <p class="hero-note">No credit card for self-hosted. No credit card for the 14-day trial.</p>
+      </div>
+      <div class="hero-visual" aria-hidden="true">
+        <pre class="terminal"><code><span class="prompt">You</span>  Bump keywords to include "ai stylist" and push a new
+     description highlighting the new onboarding flow.
+
+<span class="prompt">Claude</span>  Reading current listing via <span class="hl">asc_get_app_listing</span>…
+       Keywords are at 92/100 chars; adding "ai stylist" fits.
+       Drafting description change.
+       Applying via <span class="hl">asc_update_keywords</span> and
+       <span class="hl">asc_update_description</span>.
+
+       ✓ Done. Mutation log updated.
+       I'll check <span class="hl">asc_get_change_impact_analysis</span>
+       in 7 days to see if MRR moved.</code></pre>
+      </div>
+    </section>
+
+    <section class="proof">
+      <h2>Built on work you already trust</h2>
+      <div class="logo-row">
+        <span>Claude</span><span>·</span>
+        <span>OpenAI Codex</span><span>·</span>
+        <span>Cursor</span><span>·</span>
+        <span>RevenueCat</span><span>·</span>
+        <span>n8n</span>
+      </div>
+    </section>
+
+    <section id="features" class="features">
+      <h2>Why StorePilot</h2>
+      <div class="grid">
+        <article class="card">
+          <h3>60+ tools, one vocabulary</h3>
+          <p>
+            Read listings, update keywords, manage screenshots, run
+            Custom Product Pages and Product Page Optimization experiments,
+            submit versions for review — all as MCP tools your agent can call.
+          </p>
+        </article>
+        <article class="card">
+          <h3>Revenue correlation, built in</h3>
+          <p>
+            Every listing mutation is logged with the RevenueCat metrics at
+            the time of change. <code>asc_get_change_impact_analysis</code>
+            tells you which edits preceded subscription lifts.
+          </p>
+        </article>
+        <article class="card">
+          <h3>Scheduled health reports</h3>
+          <p>
+            Weekly markdown digest of your listing score, revenue trend, and
+            recent change impact — piped to email or Slack, all automated.
+          </p>
+        </article>
+        <article class="card">
+          <h3>Slack &amp; Discord alerts</h3>
+          <p>
+            Get pinged the moment MRR shifts, health scores drop, or a review
+            state changes. One webhook URL, zero glue code.
+          </p>
+        </article>
+        <article class="card">
+          <h3>Open source &amp; self-hostable</h3>
+          <p>
+            Run it yourself for free under MIT. Clone the repo, run
+            <code>python3 src/index.py</code>, and you're in business. Cloud
+            tier is convenience, not gatekeeping.
+          </p>
+        </article>
+        <article class="card">
+          <h3>Audit-ready mutation log</h3>
+          <p>
+            Every write emits a JSONL record with before/after diff and the
+            metrics snapshot at mutation time. Enterprise-grade audit trail
+            from day one.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section id="pricing" class="pricing">
+      <h2>Pricing</h2>
+      <p class="subhead">Self-host forever for free. Upgrade when you want convenience.</p>
+      <div class="tier-grid">
+        <article class="tier">
+          <h3>Free</h3>
+          <p class="price">$0</p>
+          <p class="price-note">Self-hosted, forever.</p>
+          <ul>
+            <li>All 60+ MCP tools</li>
+            <li>1 app</li>
+            <li>Community support</li>
+            <li>MIT licensed</li>
+          </ul>
+          <a class="btn btn-ghost" href="/docs/self-host">Self-host docs</a>
+        </article>
+        <article class="tier tier-highlight">
+          <span class="tier-badge">Most popular</span>
+          <h3>Pro</h3>
+          <p class="price">$29<span>/mo</span></p>
+          <p class="price-note">Hosted convenience.</p>
+          <ul>
+            <li>Hosted MCP endpoint</li>
+            <li>Managed JWT auth</li>
+            <li>Up to 3 apps</li>
+            <li>Change impact analysis</li>
+            <li>Email support</li>
+          </ul>
+          <a class="btn btn-primary" href="#signup">Start 14-day trial</a>
+        </article>
+        <article class="tier">
+          <h3>Team</h3>
+          <p class="price">$79<span>/mo</span></p>
+          <p class="price-note">For small studios.</p>
+          <ul>
+            <li>Everything in Pro</li>
+            <li>10 apps</li>
+            <li>Weekly health reports</li>
+            <li>Slack / Discord alerts</li>
+            <li>Priority support</li>
+          </ul>
+          <a class="btn btn-ghost" href="#signup">Start 14-day trial</a>
+        </article>
+        <article class="tier">
+          <h3>Enterprise</h3>
+          <p class="price">$199<span>/mo</span></p>
+          <p class="price-note">For larger teams.</p>
+          <ul>
+            <li>Everything in Team</li>
+            <li>Unlimited apps</li>
+            <li>SSO (SAML / OIDC)</li>
+            <li>Audit log UI &amp; RBAC</li>
+            <li>SLA + dedicated onboarding</li>
+          </ul>
+          <a class="btn btn-ghost" href="mailto:hi@storepilot.app">Contact sales</a>
+        </article>
+      </div>
+    </section>
+
+    <section id="signup" class="signup">
+      <h2>Ready to hand your store over to AI?</h2>
+      <p>Paste your ASC key, get a working MCP endpoint in under 2 minutes.</p>
+      <a class="btn btn-primary btn-lg" href="https://app.storepilot.app/signup">Start free trial</a>
+      <a class="btn btn-ghost btn-lg" href="/docs/self-host">Or self-host</a>
+    </section>
+  </main>
+
+  <footer>
+    <div class="foot-inner">
+      <p>© 2026 StorePilot. MIT licensed core.</p>
+      <nav>
+        <a href="/docs">Docs</a>
+        <a href="https://github.com/Emuthmartinez/app-store-connect-mcp">GitHub</a>
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

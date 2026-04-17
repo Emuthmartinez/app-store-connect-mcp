@@ -10,8 +10,8 @@ import pytest
 
 import index
 from errors import AscApiError
-from tools.shared import extract_screenshot_upload_contract
 from tools import write as write_tools
+from tools.shared import extract_screenshot_upload_contract
 
 
 def test_unknown_tool_returns_failed_completion_contract() -> None:

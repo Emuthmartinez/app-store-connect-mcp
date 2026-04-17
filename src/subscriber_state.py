@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -59,7 +59,7 @@ class SubscriberSnapshotStore:
             )
 
         snapshot = self.get_snapshot()
-        captured_at = datetime.now(timezone.utc).isoformat()
+        captured_at = datetime.now(UTC).isoformat()
         entry = {
             "captured_at": captured_at,
             "source": source,
@@ -90,7 +90,7 @@ class SubscriberSnapshotStore:
                 details={"event": event},
             )
 
-        received_at = datetime.now(timezone.utc).isoformat()
+        received_at = datetime.now(UTC).isoformat()
         subscriber = payload.get("subscriber")
         subscriber_attributes = {}
         if isinstance(subscriber, dict):

@@ -10,7 +10,6 @@ import requests
 from config import Settings
 from errors import ConfigurationError, RevenueCatApiError
 
-
 JsonDict = dict[str, Any]
 
 

@@ -8,7 +8,6 @@ from errors import ConfigurationError, ResourceNotFoundError
 from tooling import ToolDefinition
 from tools.shared import log_mutation
 
-
 RELEASE_TYPES = {"AFTER_APPROVAL", "MANUAL", "SCHEDULED"}
 
 

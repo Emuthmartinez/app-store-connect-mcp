@@ -8,7 +8,6 @@ from pathlib import Path
 
 from errors import ConfigurationError
 
-
 SERVER_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_CHANGE_LOG_PATH = SERVER_ROOT / "data" / "changes.jsonl"
 DEFAULT_REVENUECAT_EVENT_LOG_PATH = SERVER_ROOT / "data" / "revenuecat-events.jsonl"
@@ -99,7 +98,7 @@ class Settings:
     revenuecat_base_url: str = "https://api.revenuecat.com"
 
     @classmethod
-    def load(cls) -> "Settings":
+    def load(cls) -> Settings:
         merged: dict[str, str] = {}
         for path in _candidate_env_paths():
             merged.update(_parse_env_file(path))
