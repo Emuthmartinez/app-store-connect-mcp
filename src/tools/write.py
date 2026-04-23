@@ -73,7 +73,7 @@ def update_description(runtime: Any, arguments: dict[str, Any]) -> dict[str, Any
         runtime,
         locale=locale,
         operation="update_description",
-        field_name="asc_description",
+        field_name="description",
         new_value=description,
     )
 
@@ -93,7 +93,7 @@ def update_keywords(runtime: Any, arguments: dict[str, Any]) -> dict[str, Any]:
         runtime,
         locale=locale,
         operation="update_keywords",
-        field_name="asc_keywords",
+        field_name="keywords",
         new_value=keywords,
     )
 
@@ -139,7 +139,7 @@ def update_subtitle(runtime: Any, arguments: dict[str, Any]) -> dict[str, Any]:
         runtime,
         locale=locale,
         operation="update_subtitle",
-        field_name="asc_subtitle",
+        field_name="subtitle",
         new_value=subtitle,
     )
 
