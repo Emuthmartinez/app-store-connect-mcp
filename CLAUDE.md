@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-A reusable stdio MCP server for App Store Connect listing automation with RevenueCat metrics integration. App-agnostic — switch apps by pointing to a different env file.
+A reusable stdio MCP server for App Store Connect listing automation with RevenueCat metrics integration. App-agnostic — configure one default app, then target any other app visible to the same API key per tool call.
 
 ## Commands
 
@@ -33,9 +33,9 @@ No build step. Python 3.11+ required.
 
 ## Architecture
 
-**Entrypoint**: `src/index.py` — creates an MCP `Server` (name: `app_store_connect_mcp`), lazily initializes a `Runtime` dataclass that holds all shared dependencies, and dispatches tool calls by name. Sync tool handlers are wrapped with `asyncio.to_thread()` to avoid blocking the event loop. All logging goes to stderr to keep the stdio protocol clean.
+**Entrypoint**: `src/index.py` — creates an MCP `Server` (name: `app_store_connect_mcp`), lazily initializes a `Runtime` dataclass that holds all shared dependencies, and dispatches tool calls by name. Sync tool handlers are wrapped with `asyncio.to_thread()` to avoid blocking the event loop. App-scoped calls may include exactly one of `app_id`, `bundle_id`, or `app_name`; the dispatcher resolves that selector, strips it before invoking the handler, and stores it in a context var for the client. All logging goes to stderr to keep the stdio protocol clean.
 
-**Tool system**: Tools are `ToolDefinition` instances (defined in `src/tooling.py`) — each pairs a name, JSON schema, handler function, and MCP annotations (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`). Handlers receive `(runtime, arguments)` and return a dict payload. The entrypoint adds `completion_state` and `should_continue` fields to every response. All tool names are prefixed with `asc_` for namespace safety. Tools are organized by domain in `src/tools/`:
+**Tool system**: Tools are `ToolDefinition` instances (defined in `src/tooling.py`) — each pairs a name, JSON schema, handler function, MCP annotations (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`), and an app-selection flag. `to_mcp_tool()` injects shared selector fields into app-scoped tool schemas. Handlers receive `(runtime, arguments)` and return a dict payload. The entrypoint adds `completion_state` and `should_continue` fields to every response. All tool names are prefixed with `asc_` for namespace safety. Tools are organized by domain in `src/tools/`:
 - `read.py` — listing state reads
 - `write.py` — listing mutations (description, keywords, screenshots, etc.)
 - `versioning.py` — version lifecycle (create, assign build, submit for review, release)
@@ -58,7 +58,7 @@ All tool lists are aggregated in `src/tools/__init__.py` as `ALL_TOOLS`.
 
 ## Configuration
 
-Loaded by `Settings.load()` in priority order: `.env` → `APP_STORE_CONNECT_MCP_ENV` path → process environment. Required keys: `APP_STORE_KEY_ID`, `APP_STORE_ISSUER_ID`, `APP_STORE_PRIVATE_KEY`, `APP_STORE_BUNDLE_ID`. `APP_STORE_PRIVATE_KEY` accepts inline PEM or a `.p8` file path. Profile-specific env files go in `profiles/`.
+Loaded by `Settings.load()` in priority order: `.env` → `APP_STORE_CONNECT_MCP_ENV` path → process environment. Required keys: `APP_STORE_KEY_ID`, `APP_STORE_ISSUER_ID`, `APP_STORE_PRIVATE_KEY`, `APP_STORE_BUNDLE_ID`. `APP_STORE_BUNDLE_ID` is the fallback app when no per-call selector is provided. `APP_STORE_PRIVATE_KEY` accepts inline PEM or a `.p8` file path. Profile-specific env files go in `profiles/`.
 
 Analysis heuristics are configurable via env vars (JSON):
 - `ASC_COPY_TERMS` — subtitle/keyword/description gap detection terms
@@ -76,6 +76,7 @@ Tests use `conftest.py` to add `src/` to `sys.path`. No fixtures beyond path set
 - All tool names must start with `asc_` to prevent namespace collisions with other MCP servers.
 - All `ToolDefinition` entries must include `annotations` with `readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`.
 - All input schema properties must include a `description` string.
+- Tools that are not scoped to an App Store app, such as RevenueCat subscriber state tools, must set `supports_app_selection=False`.
 - All tool responses must include `ok: bool` at minimum. Error payloads use `code`, `message`, `retryable` fields.
 - Client config example files live in `clients/` for Codex, Claude, and generic MCP registration.
 

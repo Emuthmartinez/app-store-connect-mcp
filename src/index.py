@@ -31,6 +31,7 @@ from config import Settings
 from errors import AppStoreConnectMcpError, serialize_error
 from revenuecat import RevenueCatMetricsClient
 from subscriber_state import SubscriberSnapshotStore
+from tooling import extract_app_selector, strip_app_selector
 from tools import ALL_TOOLS
 
 try:
@@ -111,6 +112,14 @@ def _finalize_payload(payload: dict, *, completion_state: str) -> dict:
     return payload
 
 
+def _run_tool(definition, runtime: Runtime, arguments: dict) -> dict:
+    selector = extract_app_selector(arguments) if definition.supports_app_selection else None
+    tool_arguments = strip_app_selector(arguments) if definition.supports_app_selection else arguments
+
+    with runtime.asc.use_app_selector(selector):
+        return definition.handler(runtime, tool_arguments)
+
+
 @server.list_tools()
 async def list_tools():
     return [tool.to_mcp_tool() for tool in ALL_TOOLS]
@@ -135,7 +144,12 @@ async def call_tool(name: str, arguments: dict | None):
         )
 
     try:
-        payload = await asyncio.to_thread(definition.handler, get_runtime(), arguments or {})
+        payload = await asyncio.to_thread(
+            _run_tool,
+            definition,
+            get_runtime(),
+            arguments or {},
+        )
         return _to_text(_finalize_payload(payload, completion_state="completed"))
     except Exception as exc:  # pragma: no cover - guarded by unit tests around payloads
         return _to_text(_finalize_payload(serialize_error(exc), completion_state="failed"))

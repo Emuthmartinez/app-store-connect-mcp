@@ -2,7 +2,7 @@
 
 Reusable stdio MCP server for App Store Connect listing automation.
 
-App-agnostic — point it at any app by supplying a different env file.
+App-agnostic — configure one default app, then target any other app visible to the same API key per tool call.
 
 ## What It Does
 
@@ -47,7 +47,7 @@ The server loads configuration in this order:
 | `APP_STORE_KEY_ID` | App Store Connect API key ID |
 | `APP_STORE_ISSUER_ID` | App Store Connect issuer ID |
 | `APP_STORE_PRIVATE_KEY` | Inline PEM content or path to `.p8` file |
-| `APP_STORE_BUNDLE_ID` | Bundle ID of the app to manage |
+| `APP_STORE_BUNDLE_ID` | Bundle ID of the default app to manage when no per-call selector is supplied |
 
 ### Optional — RevenueCat
 
@@ -102,6 +102,28 @@ Point at an app-specific env file with `APP_STORE_CONNECT_MCP_ENV` when you need
 
 Ready-made client snippets for Claude, Codex, and generic MCP registration live in `clients/`.
 
+## Managing Multiple Apps
+
+Most tools accept one optional app selector:
+
+- `app_id` — exact App Store Connect app id. Prefer this when you know it.
+- `bundle_id` — exact bundle id, e.g. `com.example.app`.
+- `app_name` — exact app name. Use this only when ids are unavailable.
+
+Provide only one selector per call. If no selector is supplied, the server uses `APP_STORE_BUNDLE_ID` as the default app. The selected app is resolved once, cached in memory, and then all dedicated listing, screenshot, versioning, Custom Product Page, review, and analysis tools use that app's relationships for the call.
+
+Example calls:
+
+```json
+{"bundle_id": "com.example.nextapp", "locale": "en-US"}
+```
+
+```json
+{"app_id": "1234567890", "locale": "en-US", "subtitle": "Plan outfits faster"}
+```
+
+The RevenueCat subscriber tools remain profile/project-scoped and do not accept app selectors.
+
 ## RevenueCat Webhook Listener
 
 Optional standalone webhook listener for real-time subscriber event ingestion:
@@ -153,6 +175,7 @@ All 54 tools are prefixed with `asc_` and include MCP annotations. Key categorie
 
 - `asc_create_review_submission` can create a fresh submission even when one is already waiting for review. Agents should read current review state first.
 - `asc_create_custom_product_page` creates the initial draft version and localization inline. `asc_create_custom_product_page_version` will return a `409` until the current version is no longer inflight.
+- Dedicated app-scoped tools accept `app_id`, `bundle_id`, or `app_name` so one MCP registration can manage all apps visible to the API key.
 - Generic mutation tools (`asc_api_post`, `asc_api_patch`, `asc_api_delete`) log before/after snapshots and RevenueCat metrics to the change log.
 
 ## License

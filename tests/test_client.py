@@ -9,7 +9,7 @@ import pytest
 
 from client import AppStoreConnectClient
 from config import Settings
-from errors import AscApiError
+from errors import AscApiError, ConfigurationError
 
 
 class FakeTokenProvider:
@@ -39,11 +39,7 @@ class FakeResponse:
         self.text = text
         self.headers = headers or {"Content-Type": "application/json"}
         self.reason = reason
-        self.content = (
-            json.dumps(json_body).encode("utf-8")
-            if json_body is not None
-            else text.encode("utf-8")
-        )
+        self.content = json.dumps(json_body).encode("utf-8") if json_body is not None else text.encode("utf-8")
 
     def json(self) -> dict:
         if self._json_body is None:
@@ -159,6 +155,112 @@ def test_create_app_store_version_uses_app_relationship() -> None:
     assert body["data"]["attributes"]["versionString"] == "1.0.49"
 
 
+def test_app_id_selector_overrides_default_only_inside_context() -> None:
+    session = FakeSession(
+        [
+            FakeResponse(
+                200,
+                json_body={
+                    "data": {
+                        "id": "app-2",
+                        "attributes": {
+                            "bundleId": "other.bundle",
+                            "name": "Other App",
+                        },
+                    }
+                },
+            ),
+            FakeResponse(
+                200,
+                json_body={
+                    "data": [
+                        {
+                            "id": "app-1",
+                            "attributes": {
+                                "bundleId": "example.bundle",
+                                "name": "Example App",
+                            },
+                        }
+                    ]
+                },
+            ),
+        ]
+    )
+    client = AppStoreConnectClient(_settings(), FakeTokenProvider(), session=session)
+
+    with client.use_app_selector({"app_id": "app-2"}):
+        assert client.get_configured_app()["id"] == "app-2"
+
+    assert client.get_configured_app()["id"] == "app-1"
+    assert session.calls[0]["url"].endswith("/v1/apps/app-2")
+    assert "filter%5BbundleId%5D=example.bundle" in session.calls[1]["url"]
+
+
+def test_bundle_selector_feeds_dedicated_tool_app_relationships_and_caches() -> None:
+    session = FakeSession(
+        [
+            FakeResponse(
+                200,
+                json_body={
+                    "data": [
+                        {
+                            "id": "app-2",
+                            "attributes": {
+                                "bundleId": "other.bundle",
+                                "name": "Other App",
+                            },
+                        }
+                    ]
+                },
+            ),
+            FakeResponse(200, json_body={"data": []}),
+        ]
+    )
+    client = AppStoreConnectClient(_settings(), FakeTokenProvider(), session=session)
+
+    with client.use_app_selector({"bundle_id": "other.bundle"}):
+        assert client.get_app_versions() == []
+
+    assert len(session.calls) == 2
+    assert "filter%5BbundleId%5D=other.bundle" in session.calls[0]["url"]
+    assert session.calls[1]["url"].endswith("/v1/apps/app-2/appStoreVersions")
+
+
+def test_name_selector_requires_a_unique_app_match() -> None:
+    session = FakeSession(
+        [
+            FakeResponse(
+                200,
+                json_body={
+                    "data": [
+                        {
+                            "id": "app-1",
+                            "attributes": {
+                                "bundleId": "example.one",
+                                "name": "Example",
+                            },
+                        },
+                        {
+                            "id": "app-2",
+                            "attributes": {
+                                "bundleId": "example.two",
+                                "name": "Example",
+                            },
+                        },
+                    ]
+                },
+            )
+        ]
+    )
+    client = AppStoreConnectClient(_settings(), FakeTokenProvider(), session=session)
+
+    with pytest.raises(ConfigurationError) as exc_info, client.use_app_selector({"app_name": "Example"}):
+        client.get_configured_app()
+
+    assert exc_info.value.details["app_name"] == "Example"
+    assert len(exc_info.value.details["matches"]) == 2
+
+
 def test_set_version_build_patches_relationship() -> None:
     session = FakeSession([FakeResponse(200, json_body={"data": {"id": "build-1"}})])
     client = AppStoreConnectClient(_settings(), FakeTokenProvider(), session=session)
@@ -204,9 +306,7 @@ def test_create_custom_product_page_uses_inline_version_and_localization() -> No
     assert body["data"]["relationships"]["app"]["data"]["id"] == "app-1"
     assert body["data"]["attributes"]["name"] == "Winter Hooks"
     version_link = body["data"]["relationships"]["appCustomProductPageVersions"]["data"][0]
-    version_resource = next(
-        item for item in body["included"] if item["type"] == "appCustomProductPageVersions"
-    )
+    version_resource = next(item for item in body["included"] if item["type"] == "appCustomProductPageVersions")
     localization_resource = next(
         item for item in body["included"] if item["type"] == "appCustomProductPageLocalizations"
     )

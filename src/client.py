@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import hashlib
 import time
+from collections.abc import Iterable
+from contextlib import contextmanager
+from contextvars import ContextVar
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 from urllib.parse import urlencode
 from uuid import uuid4
 
@@ -13,8 +16,7 @@ import requests
 
 from auth import AppStoreJwtProvider
 from config import Settings
-from errors import AscApiError, ResourceNotFoundError
-
+from errors import AscApiError, ConfigurationError, ResourceNotFoundError
 
 JsonDict = dict[str, Any]
 
@@ -27,6 +29,12 @@ EDITABLE_VERSION_STATES = {
     "PENDING_DEVELOPER_RELEASE",
     "PROCESSING_FOR_DISTRIBUTION",
 }
+
+AppSelector = dict[str, str]
+_APP_SELECTOR: ContextVar[AppSelector | None] = ContextVar(
+    "app_store_connect_app_selector",
+    default=None,
+)
 
 
 class AppStoreConnectClient:
@@ -45,6 +53,21 @@ class AppStoreConnectClient:
         self._session = session or requests.Session()
         self._sleep_fn = sleep_fn
         self._cached_app: JsonDict | None = None
+        self._cached_selected_apps: dict[tuple[str, str], JsonDict] = {}
+
+    @contextmanager
+    def use_app_selector(self, selector: AppSelector | None):
+        """Temporarily target a non-default app for this tool call."""
+
+        if selector is None:
+            yield
+            return
+
+        token = _APP_SELECTOR.set(selector)
+        try:
+            yield
+        finally:
+            _APP_SELECTOR.reset(token)
 
     def request(
         self,
@@ -67,9 +90,7 @@ class AppStoreConnectClient:
             if headers:
                 request_headers.update(headers)
             if use_auth:
-                request_headers["Authorization"] = (
-                    f"Bearer {self._token_provider.get_token(force_refresh=False)}"
-                )
+                request_headers["Authorization"] = f"Bearer {self._token_provider.get_token(force_refresh=False)}"
 
             response = self._session.request(
                 method=method,
@@ -116,6 +137,10 @@ class AppStoreConnectClient:
     def get_configured_app(self) -> JsonDict:
         """Return the configured app resource, cached in-memory."""
 
+        selector = _APP_SELECTOR.get()
+        if selector is not None:
+            return self._resolve_selected_app(selector)
+
         if self._cached_app is not None:
             return self._cached_app
 
@@ -130,6 +155,106 @@ class AppStoreConnectClient:
 
         self._cached_app = apps[0]
         return self._cached_app
+
+    def _resolve_selected_app(self, selector: AppSelector) -> JsonDict:
+        if "app_id" in selector:
+            return self._get_selected_app_by_id(selector["app_id"])
+        if "bundle_id" in selector:
+            return self._get_selected_app_by_filter(
+                cache_key=("bundle_id", selector["bundle_id"]),
+                filter_name="filter[bundleId]",
+                filter_value=selector["bundle_id"],
+                detail_key="bundle_id",
+            )
+        if "app_name" in selector:
+            return self._get_selected_app_by_filter(
+                cache_key=("app_name", selector["app_name"]),
+                filter_name="filter[name]",
+                filter_value=selector["app_name"],
+                detail_key="app_name",
+            )
+        raise ConfigurationError(
+            "Unsupported app selector",
+            details={"selector": selector},
+        )
+
+    def _get_selected_app_by_id(self, app_id: str) -> JsonDict:
+        cache_key = ("app_id", app_id)
+        cached = self._cached_selected_apps.get(cache_key)
+        if cached is not None:
+            return cached
+
+        payload = self.request("GET", f"/v1/apps/{app_id}")
+        app = payload.get("data")
+        if not isinstance(app, dict) or not app:
+            raise ResourceNotFoundError(
+                "No App Store Connect app matched the requested app id",
+                details={"app_id": app_id},
+            )
+
+        self._cached_selected_apps[cache_key] = app
+        return app
+
+    def _get_selected_app_by_filter(
+        self,
+        *,
+        cache_key: tuple[str, str],
+        filter_name: str,
+        filter_value: str,
+        detail_key: str,
+    ) -> JsonDict:
+        cached = self._cached_selected_apps.get(cache_key)
+        if cached is not None:
+            return cached
+
+        params = urlencode({filter_name: filter_value, "limit": 10})
+        payload = self.request("GET", f"/v1/apps?{params}")
+        apps = payload.get("data", [])
+        if not apps:
+            raise ResourceNotFoundError(
+                "No App Store Connect app matched the requested selector",
+                details={detail_key: filter_value},
+            )
+
+        app = self._select_unique_app_match(
+            apps,
+            detail_key=detail_key,
+            expected=filter_value,
+        )
+        self._cached_selected_apps[cache_key] = app
+        return app
+
+    @staticmethod
+    def _select_unique_app_match(
+        apps: list[JsonDict],
+        *,
+        detail_key: str,
+        expected: str,
+    ) -> JsonDict:
+        if len(apps) == 1:
+            return apps[0]
+
+        attribute = "bundleId" if detail_key == "bundle_id" else "name"
+        exact_matches = [
+            app for app in apps if str(app.get("attributes", {}).get(attribute) or "").casefold() == expected.casefold()
+        ]
+        if len(exact_matches) == 1:
+            return exact_matches[0]
+
+        raise ConfigurationError(
+            "App selector matched multiple App Store Connect apps",
+            details={
+                detail_key: expected,
+                "matches": [
+                    {
+                        "id": app.get("id"),
+                        "name": app.get("attributes", {}).get("name"),
+                        "bundle_id": app.get("attributes", {}).get("bundleId"),
+                    }
+                    for app in apps
+                ],
+            },
+        )
 
     def get_app_info(self) -> JsonDict:
         return self.get_configured_app()
@@ -172,9 +297,7 @@ class AppStoreConnectClient:
         return self.get_collection(f"/v1/appStoreVersions/{version_id}/appStoreVersionLocalizations")
 
     def get_screenshot_sets(self, version_localization_id: str) -> list[JsonDict]:
-        return self.get_collection(
-            f"/v1/appStoreVersionLocalizations/{version_localization_id}/appScreenshotSets"
-        )
+        return self.get_collection(f"/v1/appStoreVersionLocalizations/{version_localization_id}/appScreenshotSets")
 
     def get_screenshots(self, screenshot_set_id: str) -> list[JsonDict]:
         return self.get_collection(f"/v1/appScreenshotSets/{screenshot_set_id}/appScreenshots")
@@ -376,9 +499,7 @@ class AppStoreConnectClient:
     ) -> list[JsonDict]:
         resolved_version_id = version_id or self.get_current_version()["id"]
         params = urlencode({"limit": max(1, min(limit, 200))})
-        return self.get_collection(
-            f"/v1/appStoreVersions/{resolved_version_id}/appStoreVersionExperimentsV2?{params}"
-        )
+        return self.get_collection(f"/v1/appStoreVersions/{resolved_version_id}/appStoreVersionExperimentsV2?{params}")
 
     def get_product_page_optimization_experiment(self, experiment_id: str) -> JsonDict:
         payload = self.request("GET", f"/v2/appStoreVersionExperiments/{experiment_id}")
@@ -521,18 +642,14 @@ class AppStoreConnectClient:
         return payload.get("data", {})
 
     def get_custom_product_page_localizations(self, version_id: str) -> list[JsonDict]:
-        return self.get_collection(
-            f"/v1/appCustomProductPageVersions/{version_id}/appCustomProductPageLocalizations"
-        )
+        return self.get_collection(f"/v1/appCustomProductPageVersions/{version_id}/appCustomProductPageLocalizations")
 
     def get_custom_product_page_localization(self, localization_id: str) -> JsonDict:
         payload = self.request("GET", f"/v1/appCustomProductPageLocalizations/{localization_id}")
         return payload.get("data", {})
 
     def get_cpp_screenshot_sets(self, localization_id: str) -> list[JsonDict]:
-        return self.get_collection(
-            f"/v1/appCustomProductPageLocalizations/{localization_id}/appScreenshotSets"
-        )
+        return self.get_collection(f"/v1/appCustomProductPageLocalizations/{localization_id}/appScreenshotSets")
 
     def create_custom_product_page(
         self,
@@ -596,7 +713,7 @@ class AppStoreConnectClient:
                                     "type": "appCustomProductPageVersions",
                                 }
                             ]
-                        }
+                        },
                     },
                 },
                 "included": [
@@ -931,10 +1048,7 @@ class AppStoreConnectClient:
 
         hint: str | None = None
         if response.status_code == 403:
-            hint = (
-                "The App Store Connect API key likely needs App Manager or Admin access "
-                "for this app."
-            )
+            hint = "The App Store Connect API key likely needs App Manager or Admin access for this app."
         elif response.status_code == 409:
             hint = (
                 "The target version or localization is in a state that does not accept "

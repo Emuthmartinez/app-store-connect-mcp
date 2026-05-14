@@ -4,14 +4,17 @@ from __future__ import annotations
 
 import asyncio
 import json
+from contextlib import contextmanager
 from pathlib import Path
+from typing import Any
 
 import pytest
 
 import index
-from errors import AscApiError
-from tools.shared import extract_screenshot_upload_contract
+from errors import AscApiError, ConfigurationError
+from tooling import ToolDefinition, extract_app_selector
 from tools import write as write_tools
+from tools.shared import extract_screenshot_upload_contract
 
 
 def test_unknown_tool_returns_failed_completion_contract() -> None:
@@ -22,6 +25,69 @@ def test_unknown_tool_returns_failed_completion_contract() -> None:
     assert payload["error"]["code"] == "unknown_tool"
     assert payload["completion_state"] == "failed"
     assert payload["should_continue"] is True
+
+
+def test_tool_schemas_add_app_selector_except_subscriber_tools() -> None:
+    listing_tool = index.tool_map["asc_get_app_listing"].to_mcp_tool()
+    subscriber_tool = index.tool_map["asc_get_subscriber_snapshot"].to_mcp_tool()
+
+    listing_properties = listing_tool.inputSchema["properties"]
+    subscriber_properties = subscriber_tool.inputSchema["properties"]
+
+    assert {"app_id", "bundle_id", "app_name"} <= set(listing_properties)
+    assert listing_tool.inputSchema["additionalProperties"] is False
+    assert "app_id" not in subscriber_properties
+    assert "bundle_id" not in subscriber_properties
+    assert "app_name" not in subscriber_properties
+
+
+def test_extract_app_selector_rejects_ambiguous_selection() -> None:
+    with pytest.raises(ConfigurationError) as exc_info:
+        extract_app_selector({"app_id": "123", "bundle_id": "com.example.app"})
+
+    assert exc_info.value.details == {"provided": ["app_id", "bundle_id"]}
+
+
+class SelectorAwareAsc:
+    def __init__(self) -> None:
+        self.selectors: list[dict[str, str] | None] = []
+
+    @contextmanager
+    def use_app_selector(self, selector: dict[str, str] | None):
+        self.selectors.append(selector)
+        yield
+
+
+class SelectorRuntime:
+    def __init__(self) -> None:
+        self.asc = SelectorAwareAsc()
+
+
+def test_run_tool_applies_selector_and_strips_common_arguments() -> None:
+    seen_arguments: dict[str, Any] = {}
+
+    def handler(runtime: SelectorRuntime, arguments: dict[str, Any]) -> dict[str, Any]:
+        del runtime
+        seen_arguments.update(arguments)
+        return {"ok": True}
+
+    runtime = SelectorRuntime()
+    definition = ToolDefinition(
+        name="asc_fake",
+        description="Fake selector-aware tool.",
+        input_schema={"type": "object", "properties": {}, "additionalProperties": False},
+        handler=handler,
+    )
+
+    payload = index._run_tool(
+        definition,
+        runtime,
+        {"bundle_id": "com.example.other", "locale": "en-US"},
+    )
+
+    assert payload == {"ok": True}
+    assert runtime.asc.selectors == [{"bundle_id": "com.example.other"}]
+    assert seen_arguments == {"locale": "en-US"}
 
 
 class FakeAsc:
@@ -222,10 +288,7 @@ def test_update_promotional_text_sends_apple_attribute_name(
     assert len(runtime.asc.version_localization_calls) == 1
     _, attributes = runtime.asc.version_localization_calls[0]
     assert APPLE_ATTRIBUTE_NAMES["promotional_text"] in attributes
-    assert (
-        attributes[APPLE_ATTRIBUTE_NAMES["promotional_text"]]
-        == "Plan your week of outfits."
-    )
+    assert attributes[APPLE_ATTRIBUTE_NAMES["promotional_text"]] == "Plan your week of outfits."
 
 
 def test_update_promotional_text_clears_field_with_null(
@@ -275,15 +338,10 @@ def test_no_write_handler_sends_asc_prefixed_attribute(
     write_tools.update_description(runtime, {"locale": "en-US", "description": "x"})
     write_tools.update_keywords(runtime, {"locale": "en-US", "keywords": "x"})
     write_tools.update_subtitle(runtime, {"locale": "en-US", "subtitle": "x"})
-    write_tools.update_promotional_text(
-        runtime, {"locale": "en-US", "promotional_text": "x"}
-    )
+    write_tools.update_promotional_text(runtime, {"locale": "en-US", "promotional_text": "x"})
     write_tools.update_whats_new(runtime, {"locale": "en-US", "whats_new": "x"})
 
-    all_calls = (
-        runtime.asc.version_localization_calls
-        + runtime.asc.app_info_localization_calls
-    )
+    all_calls = runtime.asc.version_localization_calls + runtime.asc.app_info_localization_calls
     for _, attributes in all_calls:
         asc_prefixed = [key for key in attributes if key.startswith("asc_")]
         assert not asc_prefixed, (
